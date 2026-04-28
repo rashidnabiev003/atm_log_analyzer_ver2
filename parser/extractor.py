@@ -15,7 +15,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         phone: Optional[str] = None
         account: Optional[str] = None
         for line in session_lines:
-            if 'GetNewSessionNumber' in line:
+            if patterns.SESSION_START_INFO_RE.search(line):
                 if not session_id:
                     m = patterns.SESSION_RE.search(line) if hasattr(patterns, 'SESSION_RE') else None
                     if m:
@@ -33,9 +33,9 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         current_tx: Optional[Transaction] = None
         last_tx: Optional[Transaction] = None
 
-        for line_no, line in enumerate(session_lines, start=1):
+        for _, line in enumerate(session_lines, start=1):
             # 1. Старт нового платежа
-            if 'New payment started' in line:
+            if patterns.PAYMENT_START_RE.search(line):
                 if current_tx:
                     transactions.append(current_tx)
                     last_tx = current_tx
@@ -96,12 +96,12 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                         pass
 
             # 7. Завершение приема купюр — это не конец транзакции
-            if 'Initializing payment complete' in line:
+            if patterns.INIT_PAYMENT_COMPLETE_RE.search(line):
                 if current_tx:
                     current_tx.cash_collection_completed = True
 
             # 8. Настоящее завершение платежа
-            if 'PaymentComplete.html' in line:
+            if patterns.PAYMENT_COMPLETE_RE.search(line):
                 if current_tx:
                     current_tx.completed = True
                     transactions.append(current_tx)

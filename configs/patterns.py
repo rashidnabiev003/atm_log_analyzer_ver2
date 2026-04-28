@@ -15,13 +15,25 @@ GENERIC_ERROR_RE = re.compile(r'([A-Za-z0-9_]+error[A-Za-z0-9_]*)', re.IGNORECAS
 
 BILL_RE = re.compile(r'(\d+)\s+TJS\s+(\d+)')
 
-AMOUNTALL_RE = re.compile(r'AMOUNTALL_TJS=(\d+(?:\.\d+)?)')
+AAMOUNTALL_RE = re.compile(r"AMOUNTALL_TJS\s*=\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
 
-CHEQUE_AMOUNT_RE = re.compile(r'Сумма\s*:\s*(\d+(?:\.\d+)?)\s*TJS', re.IGNORECASE)
+CHEQUE_AMOUNT_RE = re.compile(r"Сумма\s*:\s*(\d+(?:\.\d+)?)\s*TJS", re.IGNORECASE)
 
-CHEQUE_CREDITED_RE = re.compile(r'Зачислено\s*:\s*(\d+(?:\.\d+)?)\s*TJS', re.IGNORECASE)
+CHEQUE_CREDITED_RE = re.compile(r"Зачислено\s*:\s*(\d+(?:\.\d+)?)\s*TJS",re.IGNORECASE)
 
-CHEQUE_COMMISSION_RE = re.compile(r'Комиссия\s*:\s*(\d+(?:\.\d+)?)\s*TJS', re.IGNORECASE)
+CHEQUE_COMMISSION_RE = re.compile( r"Комиссия\s*:\s*(\d+(?:\.\d+)?)\s*TJS", re.IGNORECASE)
+
+SESSION_START_INFO_RE = re.compile(r"GetNewSessionNumber", re.IGNORECASE)
+
+PAYMENT_START_RE = re.compile(r"New\s+payment\s+started", re.IGNORECASE)
+
+PAYMENT_COMPLETE_RE = re.compile(r"PaymentComplete\s*\.?\s*html|PaymentComplete\.html", re.IGNORECASE)
+
+INIT_PAYMENT_COMPLETE_RE = re.compile(r"Initializing\s+payment\s+complete", re.IGNORECASE)
+
+NAMED_FIELDS_RE = re.compile(r"NamedFields\s*:", re.IGNORECASE)
+
+CHEQUE_INFO_RE = re.compile(r"Cheque\s+info\s*:", re.IGNORECASE)
 
 def detect_errors(line: str) -> List[str]:
     """Detect error codes present in a log line.
