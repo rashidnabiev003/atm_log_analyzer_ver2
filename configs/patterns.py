@@ -15,7 +15,7 @@ GENERIC_ERROR_RE = re.compile(r'([A-Za-z0-9_]+error[A-Za-z0-9_]*)', re.IGNORECAS
 
 BILL_RE = re.compile(r'(\d+)\s+TJS\s+(\d+)')
 
-AAMOUNTALL_RE = re.compile(r"AMOUNTALL_TJS\s*=\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
+AMOUNTALL_RE = re.compile(r"AMOUNTALL_TJS\s*=\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
 
 CHEQUE_AMOUNT_RE = re.compile(r"Сумма\s*:\s*(\d+(?:\.\d+)?)\s*TJS", re.IGNORECASE)
 
