@@ -51,29 +51,27 @@ class Transaction:
         return "INCOMPLETE"
 
     def conclusion(self) -> str:
-        """Generate a high‑level conclusion based on detected issues."""
-        reasons: List[str] = []
+        reasons: list[str] = []
+
         for err in self.errors:
-            # Basic mapping of error codes to human messages; unknown codes are reported as is
-            if err.lower() == "lenght_error":
-                reasons.append("Купюра застряла (Lenght_error)")
-            elif err.lower() == "#28":
-                reasons.append("Купюра выброшена (#28)")
-            elif err.lower() == "stacker_opened=false":
-                reasons.append("Проблема с открытием стекера (stacker_opened=false)")
-            else:
-                reasons.append(f"Неизвестная ошибка: {err}")
+            reasons.append(f"{err.title}: {err.conclusion}")
+
         if not self.completed:
             reasons.append("Транзакция не завершена")
-        if (
-            self.expected_amount is not None
-            and int(self.expected_amount) != self.total_inserted
-        ):
+
+        if self.expected_amount is not None and int(self.expected_amount) != self.total_inserted:
             reasons.append(
-                f"Сумма купюр {self.total_inserted} не совпадает с ожидаемой {self.expected_amount}"
+                f"Сумма купюр {self.total_inserted} не совпадает с суммой операции {self.expected_amount}"
             )
+
+        if self.credited_amount is not None and int(self.credited_amount) != self.total_inserted:
+            reasons.append(
+                f"По купюрам внесено {self.total_inserted}, но зачислено {self.credited_amount}"
+            )
+
         if not reasons:
             reasons.append("Операция завершена успешно")
+
         return "; ".join(reasons)
 
     def report(self) -> str:

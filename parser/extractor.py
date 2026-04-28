@@ -7,21 +7,6 @@ from session.sessionizer import split_sessions
 
 
 def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
-    """Parse raw log lines into a list of transactions.
-
-    This function first splits the raw lines into sessions using
-    ``split_sessions``. For each session it extracts static client information
-    and then builds one or more ``Transaction`` objects corresponding to
-    payment operations within that session. It handles multi‑line events
-    (e.g., bill tables and cheque information) and associates each detail
-    with the appropriate transaction.
-
-    Args:
-        lines: An iterable producing log lines in chronological order.
-
-    Returns:
-        A list of fully populated ``Transaction`` objects.
-    """
     transactions: List[Transaction] = []
 
     for session_lines in split_sessions(lines):
@@ -48,7 +33,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         current_tx: Optional[Transaction] = None
         last_tx: Optional[Transaction] = None
 
-        for line in session_lines:
+        for line_no, line in enumerate(session_lines, start=1):
             # Start of payment
             if 'New payment started' in line:
                 # If a transaction is already in progress, finalize it as incomplete
@@ -80,10 +65,9 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     current_tx.bills.append(Bill(denomination=denom, count=count))
                     continue
                 # Error codes
-                errors = patterns.detect_errors(line)
+                errors = detect_errors_in_line(line, line_no)
                 if errors:
                     current_tx.errors.extend(errors)
-                    continue
                 # NamedFields expected amount
                 amt_match = patterns.AMOUNTALL_RE.search(line)
                 if amt_match:

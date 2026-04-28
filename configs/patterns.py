@@ -2,18 +2,12 @@ import re
 from typing import List, Dict, Pattern
 
 
-# Mapping of canonical error names to their compiled regex patterns.
-# Extend this dictionary to support additional known error codes.
 ERROR_PATTERNS: Dict[str, Pattern[str]] = {
     'Lenght_error': re.compile(r'Lenght_error', re.IGNORECASE),
     '#28': re.compile(r'#28', re.IGNORECASE),
     'stacker_opened=false': re.compile(r'stacker_opened\s*=\s*false', re.IGNORECASE),
 }
 
-# Regex for session metadata. These patterns are used to extract
-# SESSION, NUMBER (phone), and ACCOUNT fields from lines containing
-# "GetNewSessionNumber". They capture sequences of non‑whitespace/non‑comma
-# characters following the respective keys.
 SESSION_RE = re.compile(r'SESSION=([^,\s]+)')
 PHONE_RE = re.compile(r'NUMBER=(\d{9,12})')
 ACCOUNT_RE = re.compile(r'ACCOUNT=([^,\s]+)')

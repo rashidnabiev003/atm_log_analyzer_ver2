@@ -1,9 +1,12 @@
+from decimal import Decimal
 import sys
 import argparse
-from typing import Iterable
+from typing import Iterable 
 
+from configs.query import ClientQuery
 from parser.reader import read_file
 from parser.extractor import extract_transactions
+from report.investigator import investigate
 from report.reporter import print_report
 
 
@@ -24,4 +27,9 @@ def main():
 
     transactions = extract_transactions(read_file(args.path))
     result = investigate(transactions, query)
-    print_investigation_report(result)
+
+    print_report(result["transactions"])
+
+
+if __name__ == "__main__":
+    main()
