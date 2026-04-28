@@ -52,6 +52,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
             target_tx = current_tx or last_tx
 
             if target_tx:
+
                 # 3. Купюры
                 errors = detect_errors_in_line(line, line_no)
                 if errors:
@@ -68,36 +69,38 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                         target_tx.bill_row_keys.add(row_key)
                         target_tx.bills.append(Bill(denomination=denom, count=count))
 
-                # 4. NamedFields / сумма операции
-                amt_match = patterns.AMOUNTALL_RE.search(line)
-                if amt_match:
-                    try:
-                        target_tx.expected_amount = float(amt_match.group(1))
-                    except ValueError:
-                        pass
 
-                # 5. Cheque info: сумма
-                cheque_amount = patterns.CHEQUE_AMOUNT_RE.search(line)
-                if cheque_amount:
-                    try:
-                        target_tx.expected_amount = float(cheque_amount.group(1))
-                    except ValueError:
-                        pass
+                named_fields = patterns.parse_named_fields(line)
 
-                # 6. Cheque info: зачислено
-                cheque_credited = patterns.CHEQUE_CREDITED_RE.search(line)
-                if cheque_credited:
-                    try:
-                        target_tx.credited_amount = float(cheque_credited.group(1))
-                    except ValueError:
-                        pass
-                
-                commission_credited = patterns.CHEQUE_COMMISSION_RE.search(line)
-                if commission_credited:
-                    try:
-                        target_tx.commission_amount = float(commission_credited.group(1))
-                    except ValueError:
-                        pass
+                if named_fields:
+                    target_tx.named_fields.update(named_fields)
+
+                    amount_all = (
+                        named_fields.get("AMOUNTALL_TJS")
+                        or named_fields.get("AMOUNTALL")
+                    )
+                    amount = (
+                        named_fields.get("AMOUNT_TJS")
+                        or named_fields.get("AMOUNT")
+                    )
+                    commission = named_fields.get("COMMISSION")
+                    local_datetime = named_fields.get("LOCAL_DATETIME")
+
+                    parsed_amount_all = patterns.parse_money(amount_all)
+                    parsed_amount = patterns.parse_money(amount)
+                    parsed_commission = patterns.parse_money(commission)
+
+                    if parsed_amount_all is not None:
+                        target_tx.expected_amount = parsed_amount_all
+
+                    if parsed_amount is not None:
+                        target_tx.credited_amount = parsed_amount
+
+                    if parsed_commission is not None:
+                        target_tx.commission_amount = parsed_commission
+
+                    if local_datetime:
+                        target_tx.local_datetime = local_datetime
 
             # 7. Завершение приема купюр — это не конец транзакции
             if patterns.INIT_PAYMENT_COMPLETE_RE.search(line):

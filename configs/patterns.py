@@ -13,14 +13,6 @@ ACCOUNT_RE = re.compile(r'\bACCOUNT\s*=\s*([^,\s]+)', re.IGNORECASE)
 
 BILL_RE = re.compile(r'(\d+)\s+TJS\s+(\d+)')
 
-AMOUNTALL_RE = re.compile(r"AMOUNTALL_TJS\s*=\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
-
-CHEQUE_AMOUNT_RE = re.compile(r"Сумма\s*:\s*(\d+(?:\.\d+)?)\s*TJS", re.IGNORECASE)
-
-CHEQUE_CREDITED_RE = re.compile(r"Зачислено\s*:\s*(\d+(?:\.\d+)?)\s*TJS",re.IGNORECASE)
-
-CHEQUE_COMMISSION_RE = re.compile( r"Комиссия\s*:\s*(\d+(?:\.\d+)?)\s*TJS", re.IGNORECASE)
-
 SESSION_START_INFO_RE = re.compile(r"GetNewSessionNumber", re.IGNORECASE)
 
 PAYMENT_START_RE = re.compile(r"New\s+payment\s+started", re.IGNORECASE)
@@ -31,7 +23,10 @@ INIT_PAYMENT_COMPLETE_RE = re.compile(r"Initializing\s+payment\s+complete", re.I
 
 NAMED_FIELDS_RE = re.compile(r"NamedFields\s*:", re.IGNORECASE)
 
-CHEQUE_INFO_RE = re.compile(r"Cheque\s+info\s*:", re.IGNORECASE)
+NAMED_FIELD_PAIR_RE = re.compile(
+    r"\b(?P<key>[A-ZА-ЯЁ_][A-ZА-ЯЁ0-9_]*)\s*=\s*(?P<value>[^,\s;]+)",
+    re.IGNORECASE,
+)
 
 def detect_errors(line: str) -> List[str]:
     """Detect error codes present in a log line.
@@ -53,3 +48,16 @@ def detect_errors(line: str) -> List[str]:
         if pattern.search(line):
             found.append(key)
     return found
+
+def parse_named_fields(line: str) -> dict[str, str]:
+    if not NAMED_FIELDS_RE.search(line):
+        return {}
+
+    result: dict[str, str] = {}
+
+    for match in NAMED_FIELD_PAIR_RE.finditer(line):
+        key = match.group("key").upper()
+        value = match.group("value").strip()
+        result[key] = value
+
+    return result

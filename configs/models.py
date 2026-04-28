@@ -35,10 +35,14 @@ class Transaction:
     errors: list[DetectedError] = field(default_factory=list)
     cash_collection_completed: bool = False
     completed: bool = False
-    expected_amount: Optional[float] = None
-    credited_amount: Optional[float] = None
-    commission_amount: Optional[float] = None
     bill_row_keys: set[str] = field(default_factory=set)
+
+    expected_amount: Optional[float] = None      
+    credited_amount: Optional[float] = None      
+    commission_amount: Optional[float] = None 
+    local_datetime: Optional[str] = None
+
+
 
     @property
     def total_inserted(self) -> int:
