@@ -61,3 +61,19 @@ def parse_named_fields(line: str) -> dict[str, str]:
         result[key] = value
 
     return result
+
+def parse_money(value: str | None) -> float | None:
+    if value is None:
+        return None
+
+    cleaned = (
+        value.strip()
+        .replace(",", ".")
+        .replace("TJS", "")
+        .replace("tjs", "")
+    )
+
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
