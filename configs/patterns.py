@@ -11,8 +11,6 @@ SESSION_RE = re.compile(r'\bSESSION\s*=\s*([^,\s]+)', re.IGNORECASE)
 PHONE_RE = re.compile(r'\bNUMBER\s*=\s*(\+?\d{9,15})', re.IGNORECASE)
 ACCOUNT_RE = re.compile(r'\bACCOUNT\s*=\s*([^,\s]+)', re.IGNORECASE)
 
-GENERIC_ERROR_RE = re.compile(r'([A-Za-z0-9_]+error[A-Za-z0-9_]*)', re.IGNORECASE)
-
 BILL_RE = re.compile(r'(\d+)\s+TJS\s+(\d+)')
 
 AMOUNTALL_RE = re.compile(r"AMOUNTALL_TJS\s*=\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
@@ -54,11 +52,4 @@ def detect_errors(line: str) -> List[str]:
     for key, pattern in ERROR_PATTERNS.items():
         if pattern.search(line):
             found.append(key)
-    # Look for unknown error tokens
-    for match in GENERIC_ERROR_RE.findall(line):
-        canonical_key = match
-        # Avoid duplicates, ignoring case
-        lower_known = {k.lower() for k in found}
-        if canonical_key.lower() not in lower_known:
-            found.append(canonical_key)
     return found

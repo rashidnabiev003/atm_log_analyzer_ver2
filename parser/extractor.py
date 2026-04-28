@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Iterator
+from typing import Iterable, List, Optional
 
 from configs import patterns
 from configs.models import Transaction, Bill, DetectedError
@@ -33,7 +33,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         current_tx: Optional[Transaction] = None
         last_tx: Optional[Transaction] = None
 
-        for _, line in enumerate(session_lines, start=1):
+        for line_no, line in enumerate(session_lines, start=1):
             # 1. Старт нового платежа
             if patterns.PAYMENT_START_RE.search(line):
                 if current_tx:
@@ -53,6 +53,10 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
             if target_tx:
                 # 3. Купюры
+                errors = detect_errors_in_line(line, line_no)
+                if errors:
+                    target_tx.errors.extend(errors)
+
                 bill_match = patterns.BILL_RE.search(line)
                 if bill_match:
                     denom = int(bill_match.group(1))
