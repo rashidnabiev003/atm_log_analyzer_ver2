@@ -87,6 +87,13 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                         target_tx.credited_amount = float(cheque_credited.group(1))
                     except ValueError:
                         pass
+                
+                commission_credited = patterns.CHEQUE_COMMISSION_RE.search(line)
+                if commission_credited:
+                    try:
+                        target_tx.commission_amount = float(commission_credited.group(1))
+                    except ValueError:
+                        pass
 
             # 7. Завершение приема купюр — это не конец транзакции
             if 'Initializing payment complete' in line:

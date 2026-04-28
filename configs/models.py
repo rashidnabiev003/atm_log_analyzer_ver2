@@ -37,6 +37,7 @@ class Transaction:
     completed: bool = False
     expected_amount: Optional[float] = None
     credited_amount: Optional[float] = None
+    commission_amount: Optional[float] = None
 
     @property
     def total_inserted(self) -> int:
@@ -65,15 +66,27 @@ class Transaction:
                 f"Сумма купюр {self.total_inserted} не совпадает с суммой операции {self.expected_amount}"
             )
 
-        if self.credited_amount is not None and int(self.credited_amount) != self.total_inserted:
-            reasons.append(
-                f"По купюрам внесено {self.total_inserted}, но зачислено {self.credited_amount}"
-            )
+        if self.credited_amount is not None:
+            if self.commission_amount is not None:
+                expected_credited = self.total_inserted - self.commission_amount
 
-        if not reasons:
-            reasons.append("Операция завершена успешно")
+                if round(expected_credited, 2) != round(self.credited_amount, 2):
+                    reasons.append(
+                        f"Некорректное зачисление: по купюрам {self.total_inserted}, "
+                        f"комиссия {self.commission_amount}, ожидаемое зачисление "
+                        f"{expected_credited}, фактически зачислено {self.credited_amount}"
+                    )
+            else:
+                if int(self.credited_amount) != self.total_inserted:
+                    reasons.append(
+                        f"По купюрам внесено {self.total_inserted}, но зачислено {self.credited_amount}. "
+                        f"Комиссия не распознана, поэтому расхождение может быть штатной комиссией."
+                    )
 
-        return "; ".join(reasons)
+                if not reasons:
+                    reasons.append("Операция завершена успешно")
+
+                return "; ".join(reasons)
 
     def report(self) -> str:
         """Format a detailed report string for this transaction."""
@@ -99,6 +112,7 @@ class Transaction:
             f"Аккаунт: {self.account}\n"
             f"Внесено: {self.total_inserted} TJS (купюры: {bill_list})\n"
             f"Ожидаемая сумма: {self.expected_amount if self.expected_amount is not None else 'N/A'}\n"
+            f"Коммиссия: {self.commission_amount if self.commission_amount is not None else 'N/A'}\n"
             f"Зачислено: {self.credited_amount if self.credited_amount is not None else 'N/A'}\n"
             f"Статус: {self.status()}\n"
             f"Ошибки:\n{errors_text}\n"

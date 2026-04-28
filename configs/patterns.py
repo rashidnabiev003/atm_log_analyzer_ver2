@@ -1,7 +1,6 @@
 import re
 from typing import List, Dict, Pattern
 
-
 ERROR_PATTERNS: Dict[str, Pattern[str]] = {
     'Lenght_error': re.compile(r'Lenght_error', re.IGNORECASE),
     '#28': re.compile(r'#28', re.IGNORECASE),
@@ -12,21 +11,17 @@ SESSION_RE = re.compile(r'\bSESSION\s*=\s*([^,\s]+)', re.IGNORECASE)
 PHONE_RE = re.compile(r'\bNUMBER\s*=\s*(\+?\d{9,15})', re.IGNORECASE)
 ACCOUNT_RE = re.compile(r'\bACCOUNT\s*=\s*([^,\s]+)', re.IGNORECASE)
 
-# Generic pattern for capturing unknown error tokens containing 'error'.
 GENERIC_ERROR_RE = re.compile(r'([A-Za-z0-9_]+error[A-Za-z0-9_]*)', re.IGNORECASE)
 
-# Regex for bill table entries: matches '<denom> TJS <count>'
 BILL_RE = re.compile(r'(\d+)\s+TJS\s+(\d+)')
 
-# Regex for expected amount in NamedFields: 'AMOUNTALL_TJS=...'
 AMOUNTALL_RE = re.compile(r'AMOUNTALL_TJS=(\d+(?:\.\d+)?)')
 
-# Regex for cheque info: 'Сумма : <amount> TJS'
 CHEQUE_AMOUNT_RE = re.compile(r'Сумма\s*:\s*(\d+(?:\.\d+)?)\s*TJS', re.IGNORECASE)
 
-# Regex for cheque credited: 'Зачислено : <amount> TJS'
 CHEQUE_CREDITED_RE = re.compile(r'Зачислено\s*:\s*(\d+(?:\.\d+)?)\s*TJS', re.IGNORECASE)
 
+CHEQUE_COMMISSION_RE = re.compile(r'Комиссия\s*:\s*(\d+(?:\.\d+)?)\s*TJS', re.IGNORECASE)
 
 def detect_errors(line: str) -> List[str]:
     """Detect error codes present in a log line.
