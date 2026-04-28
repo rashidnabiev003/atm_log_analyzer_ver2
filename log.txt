@@ -6,14 +6,19 @@
 20.04.2026 14.31.26.900 WARNxxx#28: Выброс купюры;device=validator;noise_without_spaces
 20.04.2026 14.31.28.333 ERRORxxxstacker_opened = false.Lenght_errorYYY
 20.04.2026 14.31.30.100 ERROR Payment packet loading error raw_payload=...
-20.04.2026 14.31.32.010 INFO Номинал Валюта Кол-во
-20.04.2026 14.31.32.020 INFO 100      TJS   1
-20.04.2026 14.31.32.030 INFO 200      TJS   1
+20.04.2026 14.31.32.010 info(или вообще все что угодно)
+ Номинал Валюта Кол-во
+ 100      TJS   1
+ 200      TJS   1
+ 20.04.2026 14.31.32.010 info(или вообще все что угодно)
+ Номинал Валюта Кол-во
+ 100      TJS   1
+ 200      TJS   1
 20.04.2026 14.31.36.000 INFO Initializing payment complete.
 20.04.2026 14.31.37.444 NamedFields: Номер телефона=992900000000 AMOUNTALL_TJS=300.00 SERVICE=wallet
-20.04.2026 14.31.40.001 Cheque info:
-20.04.2026 14.31.40.020 Сумма : 300.00 TJS
-20.04.2026 14.31.40.030 Комиссия : 4.00 TJS
-20.04.2026 14.31.40.040 Зачислено : 296.00 TJS
+ Cheque info:
+Сумма : 300.00 TJS
+Комиссия : 4.00 TJS
+Зачислено : 296.00 TJS
 20.04.2026 14.31.45.111 WEB PaymentComplete.html?session=887766&result=ok
 20.04.2026 14.32.00.000 DEBUG_UI Entered `main.html` page.

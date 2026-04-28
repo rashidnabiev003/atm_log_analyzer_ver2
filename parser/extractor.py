@@ -52,17 +52,17 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
             target_tx = current_tx or last_tx
 
             if target_tx:
-                # 2. Ошибки — ищем всегда, независимо от других фактов в строке
-                errors = detect_errors_in_line(line, line_no)
-                if errors:
-                    target_tx.errors.extend(errors)
-
                 # 3. Купюры
                 bill_match = patterns.BILL_RE.search(line)
                 if bill_match:
                     denom = int(bill_match.group(1))
                     count = int(bill_match.group(2))
-                    target_tx.bills.append(Bill(denomination=denom, count=count))
+
+                    row_key = f"{denom}:TJS:{count}"
+
+                    if row_key not in target_tx.bill_row_keys:
+                        target_tx.bill_row_keys.add(row_key)
+                        target_tx.bills.append(Bill(denomination=denom, count=count))
 
                 # 4. NamedFields / сумма операции
                 amt_match = patterns.AMOUNTALL_RE.search(line)
