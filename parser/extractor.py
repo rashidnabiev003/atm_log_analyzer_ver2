@@ -1,7 +1,8 @@
 from typing import Iterable, List, Optional, Iterator
 
 from configs import patterns
-from configs.models import Transaction, Bill
+from configs.models import Transaction, Bill, DetectedError
+from configs.error_rules import ERROR_RULES
 from session.sessionizer import split_sessions
 
 
@@ -114,3 +115,22 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
             transactions.append(current_tx)
 
     return transactions
+
+def detect_errors_in_line(line: str, line_no: int) -> list[DetectedError]:
+    result = []
+
+    for rule in ERROR_RULES:
+        if rule.pattern.search(line):
+            result.append(
+                DetectedError(
+                    code=rule.code,
+                    title=rule.title,
+                    category=rule.category,
+                    severity=rule.severity,
+                    line_no=line_no,
+                    raw=line,
+                    conclusion=rule.conclusion,
+                )
+            )
+
+    return result

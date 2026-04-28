@@ -1,4 +1,5 @@
 import sys
+import argparse
 from typing import Iterable
 
 from parser.reader import read_file
@@ -6,22 +7,21 @@ from parser.extractor import extract_transactions
 from report.reporter import print_report
 
 
-def analyze_path(path: str) -> None:
-    """Analyze a single log file and print a report."""
-    lines: Iterable[str] = read_file(path)
-    transactions = extract_transactions(lines)
-    print_report(transactions)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path")
+    parser.add_argument("--phone", required=True)
+    parser.add_argument("--account")
+    parser.add_argument("--claimed-amount", type=Decimal)
 
+    args = parser.parse_args()
 
-def main(argv: Iterable[str]) -> None:
-    """Parse command line arguments and run the analyzer."""
-    args = list(argv)
-    if not args or args[0] in {"-h", "--help"}:
-        print("Usage: python -m atm_log_analyzer_modular.main <logfile>")
-        return
-    path = args[0]
-    analyze_path(path)
+    query = ClientQuery(
+        phone_number=args.phone,
+        account=args.account,
+        claimed_amount=args.claimed_amount,
+    )
 
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
+    transactions = extract_transactions(read_file(args.path))
+    result = investigate(transactions, query)
+    print_investigation_report(result)

@@ -4,7 +4,7 @@ from configs.models import Transaction
 
 def format_transaction(tx: Transaction) -> str:
     """Return a detailed report string for a single transaction."""
-    return tx.report()  # Delegate to the model's report method
+    return tx.report()
 
 
 def format_report(transactions: Iterable[Transaction]) -> str:

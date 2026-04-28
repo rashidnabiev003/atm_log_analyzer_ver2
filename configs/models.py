@@ -14,6 +14,15 @@ class Bill:
         """Return the total value of this bill bundle."""
         return self.denomination * self.count
 
+@dataclass
+class DetectedError:
+    code: str
+    title: str
+    category: str
+    severity: str
+    line_no: int
+    raw: str
+    conclusion: str
 
 @dataclass
 class Transaction:
@@ -23,7 +32,7 @@ class Transaction:
     phone: Optional[str]
     account: Optional[str]
     bills: List[Bill] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
+    errors: list[DetectedError] = field(default_factory=list)
     completed: bool = False
     expected_amount: Optional[float] = None
     credited_amount: Optional[float] = None
