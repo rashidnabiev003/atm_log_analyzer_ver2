@@ -15,19 +15,20 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         phone: Optional[str] = None
         account: Optional[str] = None
         for line in session_lines:
-            if patterns.SESSION_START_INFO_RE.search(line):
-                if not session_id:
-                    m = patterns.SESSION_RE.search(line) if hasattr(patterns, 'SESSION_RE') else None
-                    if m:
-                        session_id = m.group(1)
-                if not phone:
-                    m = patterns.PHONE_RE.search(line) if hasattr(patterns, 'PHONE_RE') else None
-                    if m:
-                        phone = m.group(1)
-                if not account:
-                    m = patterns.ACCOUNT_RE.search(line) if hasattr(patterns, 'ACCOUNT_RE') else None
-                    if m:
-                        account = m.group(1)
+            if not session_id:
+                m = patterns.SESSION_RE.search(line)
+                if m:
+                    session_id = m.group(1)
+
+            if not phone:
+                m = patterns.PHONE_RE.search(line)
+                if m:
+                    phone = m.group(1)
+
+            if not account:
+                m = patterns.ACCOUNT_RE.search(line)
+                if m:
+                    account = m.group(1)
 
         # State variables for transactions within this session
         current_tx: Optional[Transaction] = None
@@ -70,21 +71,30 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                         target_tx.bills.append(Bill(denomination=denom, count=count))
 
 
-                named_fields = patterns.parse_named_fields(line)
+                payment_fields = patterns.parse_payment_fields(line)
 
-                if named_fields:
-                    target_tx.named_fields.update(named_fields)
+                if payment_fields:
+                    target_tx.named_fields.update(payment_fields)
 
                     amount_all = (
-                        named_fields.get("AMOUNTALL_TJS")
-                        or named_fields.get("AMOUNTALL")
+                        payment_fields.get("AMOUNTALL_TJS")
+                        or payment_fields.get("AMOUNTALL")
                     )
+
                     amount = (
-                        named_fields.get("AMOUNT_TJS")
-                        or named_fields.get("AMOUNT")
+                        payment_fields.get("AMOUNT_TJS")
+                        or payment_fields.get("AMOUNT")
                     )
-                    commission = named_fields.get("COMMISSION")
-                    local_datetime = named_fields.get("LOCAL_DATETIME")
+
+                    commission = (
+                        payment_fields.get("COMMISSION_TJS")
+                        or payment_fields.get("COMMISSION")
+                    )
+
+                    local_datetime = (
+                        payment_fields.get("LOCAL_DATIME")
+                        or payment_fields.get("LOCAL_DATETIME")
+                    )
 
                     parsed_amount_all = patterns.parse_money(amount_all)
                     parsed_amount = patterns.parse_money(amount)

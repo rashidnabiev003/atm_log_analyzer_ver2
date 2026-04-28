@@ -21,12 +21,23 @@ PAYMENT_COMPLETE_RE = re.compile(r"PaymentComplete\s*\.?\s*html|PaymentComplete\
 
 INIT_PAYMENT_COMPLETE_RE = re.compile(r"Initializing\s+payment\s+complete", re.IGNORECASE)
 
-NAMED_FIELDS_RE = re.compile(r"NamedFields\s*:", re.IGNORECASE)
-
-NAMED_FIELD_PAIR_RE = re.compile(
-    r"\b(?P<key>[A-ZА-ЯЁ_][A-ZА-ЯЁ0-9_]*)\s*=\s*(?P<value>[^,\s;]+)",
+MONEY_FIELD_RE = re.compile(
+    r"\b(?P<key>AMOUNTALL_TJS|AMOUNTALL|AMOUNT_TJS|AMOUNT|COMMISSION_TJS|COMMISSION)"
+    r"\s*[:=]\s*"
+    r"(?P<value>[+-]?\d+(?:[.,]\d+)?)",
     re.IGNORECASE,
 )
+
+LOCAL_DATETIME_RE = re.compile(
+    r"\b(?P<key>LOCAL_DATIME|LOCAL_DATETIME)"
+    r"\s*[:=]\s*"
+    r"(?P<value>"
+    r"\d{2}[./]\d{2}[./]\d{4}"
+    r"(?:\s+\d{2}[:.]\d{2}[:.]\d{2}(?:[.:]\d{1,6})?)?"
+    r")",
+    re.IGNORECASE,
+)
+
 
 def detect_errors(line: str) -> List[str]:
     """Detect error codes present in a log line.
@@ -49,18 +60,26 @@ def detect_errors(line: str) -> List[str]:
             found.append(key)
     return found
 
-def parse_named_fields(line: str) -> dict[str, str]:
-    if not NAMED_FIELDS_RE.search(line):
-        return {}
 
+def parse_payment_fields(line: str) -> dict[str, str]:
+    """
+    Парсим только системные поля платежа.
+    Не зависит от русского текста и не требует наличия 'NamedFields:' в строке.
+    """
     result: dict[str, str] = {}
 
-    for match in NAMED_FIELD_PAIR_RE.finditer(line):
+    for match in MONEY_FIELD_RE.finditer(line):
+        key = match.group("key").upper()
+        value = match.group("value").strip()
+        result[key] = value
+
+    for match in LOCAL_DATETIME_RE.finditer(line):
         key = match.group("key").upper()
         value = match.group("value").strip()
         result[key] = value
 
     return result
+
 
 def parse_money(value: str | None) -> float | None:
     if value is None:

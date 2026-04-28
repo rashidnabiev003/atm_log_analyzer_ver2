@@ -64,7 +64,13 @@ class Transaction:
             reasons.append(f"{err.title}: {err.conclusion}")
 
         if not self.completed:
-            reasons.append("Транзакция не завершена")
+            if self.cash_collection_completed:
+                reasons.append(
+                    "Платёжный этап завершён через Initializing payment complete, "
+                    "но финальный PaymentComplete.html не найден"
+                )
+            else:
+                reasons.append("Транзакция не завершена")
 
         # Главная проверка по NamedFields:
         # AMOUNTALL - COMMISSION == AMOUNT
@@ -86,8 +92,7 @@ class Transaction:
                     "полную проверку AMOUNTALL - COMMISSION = AMOUNT выполнить нельзя"
                 )
 
-        # Дополнительная проверка купюр.
-        # Выполняем только если таблица купюр реально распознана.
+        # Купюры проверяем только если они реально найдены.
         if self.total_inserted > 0 and self.expected_amount is not None:
             if round(float(self.total_inserted), 2) != round(float(self.expected_amount), 2):
                 reasons.append(
@@ -119,9 +124,9 @@ class Transaction:
             errors_text = "нет"
 
         named_fields_text = (
-            "\n".join(f"- {k}={v}" for k, v in sorted(self.named_fields.items()))
-            if self.named_fields
-            else "нет"
+        "\n".join(f"- {k}={v}" for k, v in sorted(self.named_fields.items()))
+        if self.named_fields
+        else "нет"
         )
 
         return (
