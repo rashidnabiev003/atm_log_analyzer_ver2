@@ -22,7 +22,7 @@ PAYMENT_COMPLETE_RE = re.compile(r"PaymentComplete\s*\.?\s*html|PaymentComplete\
 INIT_PAYMENT_COMPLETE_RE = re.compile(r"Initializing\s+payment\s+complete", re.IGNORECASE)
 
 MONEY_FIELD_RE = re.compile(
-    r"\b(?P<key>AMOUNTALL_TJS|AMOUNTALL|AMOUNT_TJS|AMOUNT|COMMISSION_TJS|COMMISSION)"
+    r"\b(?P<key>AMOUNTALL_TJS|AMOUNTALL|AMOUNT_TJS|AMOUNT|COMISSION_TJS|COMISSION)"
     r"\s*[:=]\s*"
     r"(?P<value>[+-]?\d+(?:[.,]\d+)?)",
     re.IGNORECASE,

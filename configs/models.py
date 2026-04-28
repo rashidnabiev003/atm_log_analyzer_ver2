@@ -38,7 +38,7 @@ class Transaction:
     bill_row_keys: set[str] = field(default_factory=set)
     expected_amount: Optional[float] = None      
     credited_amount: Optional[float] = None      
-    commission_amount: Optional[float] = None    
+    comission_amount: Optional[float] = None    
     local_datetime: Optional[str] = None
     named_fields: dict[str, str] = field(default_factory=dict)
 
@@ -73,23 +73,23 @@ class Transaction:
                 reasons.append("Транзакция не завершена")
 
         # Главная проверка по NamedFields:
-        # AMOUNTALL - COMMISSION == AMOUNT
+        # AMOUNTALL - COMISSION == AMOUNT
         if self.expected_amount is not None and self.credited_amount is not None:
-            if self.commission_amount is not None:
-                expected_credited = float(self.expected_amount) - float(self.commission_amount)
+            if self.comission_amount is not None:
+                expected_credited = float(self.expected_amount) - float(self.comission_amount)
 
                 if round(expected_credited, 2) != round(float(self.credited_amount), 2):
                     reasons.append(
                         f"Некорректное зачисление по NamedFields: "
                         f"AMOUNTALL={self.expected_amount}, "
-                        f"COMMISSION={self.commission_amount}, "
+                        f"COMISSION={self.commision_amount}, "
                         f"ожидаемый AMOUNT={expected_credited}, "
                         f"фактический AMOUNT={self.credited_amount}"
                     )
             else:
                 reasons.append(
-                    "AMOUNTALL и AMOUNT найдены, но COMMISSION не найдена — "
-                    "полную проверку AMOUNTALL - COMMISSION = AMOUNT выполнить нельзя"
+                    "AMOUNTALL и AMOUNT найдены, но COMISSION не найдена — "
+                    "полную проверку AMOUNTALL - COMISSION = AMOUNT выполнить нельзя"
                 )
 
         # Купюры проверяем только если они реально найдены.
@@ -135,7 +135,7 @@ class Transaction:
             f"Аккаунт: {self.account}\n"
             f"Внесено по таблице купюр: {self.total_inserted} TJS (купюры: {bill_list})\n"
             f"AMOUNTALL: {self.expected_amount if self.expected_amount is not None else 'N/A'}\n"
-            f"COMMISSION: {self.commission_amount if self.commission_amount is not None else 'N/A'}\n"
+            f"COMISSION: {self.comission_amount if self.comission_amount is not None else 'N/A'}\n"
             f"AMOUNT: {self.credited_amount if self.credited_amount is not None else 'N/A'}\n"
             f"LOCAL_DATIME: {self.local_datetime if self.local_datetime is not None else 'N/A'}\n"
             f"Статус: {self.status()}\n"

@@ -86,9 +86,9 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                         or payment_fields.get("AMOUNT")
                     )
 
-                    commission = (
-                        payment_fields.get("COMMISSION_TJS")
-                        or payment_fields.get("COMMISSION")
+                    comission = (
+                        payment_fields.get("COMISSION_TJS")
+                        or payment_fields.get("COMISSION")
                     )
 
                     local_datetime = (
@@ -98,7 +98,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
                     parsed_amount_all = patterns.parse_money(amount_all)
                     parsed_amount = patterns.parse_money(amount)
-                    parsed_commission = patterns.parse_money(commission)
+                    parsed_comission = patterns.parse_money(comission)
 
                     if parsed_amount_all is not None:
                         target_tx.expected_amount = parsed_amount_all
@@ -106,8 +106,8 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     if parsed_amount is not None:
                         target_tx.credited_amount = parsed_amount
 
-                    if parsed_commission is not None:
-                        target_tx.commission_amount = parsed_commission
+                    if parsed_comission is not None:
+                        target_tx.comission_amount = parsed_comission
 
                     if local_datetime:
                         target_tx.local_datetime = local_datetime
