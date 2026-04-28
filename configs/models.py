@@ -33,6 +33,7 @@ class Transaction:
     account: Optional[str]
     bills: List[Bill] = field(default_factory=list)
     errors: list[DetectedError] = field(default_factory=list)
+    cash_collection_completed: bool = False
     completed: bool = False
     expected_amount: Optional[float] = None
     credited_amount: Optional[float] = None
@@ -77,6 +78,21 @@ class Transaction:
     def report(self) -> str:
         """Format a detailed report string for this transaction."""
         bill_list = [(b.denomination, b.count) for b in self.bills]
+
+        if self.errors:
+            errors_text = "\n".join(
+                (
+                    f"- [{err.severity}] {err.code}: {err.title}\n"
+                    f"  Категория: {err.category}\n"
+                    f"  Строка: {err.line_no}\n"
+                    f"  Вывод: {err.conclusion}\n"
+                    f"  Фрагмент: {err.raw}"
+                )
+                for err in self.errors
+            )
+        else:
+            errors_text = "нет"
+
         return (
             f"Сессия: {self.session_id}\n"
             f"Телефон: {self.phone}\n"
@@ -85,6 +101,6 @@ class Transaction:
             f"Ожидаемая сумма: {self.expected_amount if self.expected_amount is not None else 'N/A'}\n"
             f"Зачислено: {self.credited_amount if self.credited_amount is not None else 'N/A'}\n"
             f"Статус: {self.status()}\n"
-            f"Ошибки: {', '.join(self.errors) if self.errors else 'нет'}\n"
+            f"Ошибки:\n{errors_text}\n"
             f"Вывод: {self.conclusion()}"
         )

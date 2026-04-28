@@ -7,7 +7,7 @@ from configs.query import ClientQuery
 from parser.reader import read_file
 from parser.extractor import extract_transactions
 from report.investigator import investigate
-from report.reporter import print_report
+from report.reporter import print_investigation_report
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
     transactions = extract_transactions(read_file(args.path))
     result = investigate(transactions, query)
 
-    print_report(result["transactions"])
+    print_investigation_report(result)
 
 
 if __name__ == "__main__":

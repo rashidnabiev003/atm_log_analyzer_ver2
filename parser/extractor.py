@@ -34,65 +34,72 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         last_tx: Optional[Transaction] = None
 
         for line_no, line in enumerate(session_lines, start=1):
-            # Start of payment
+            # 1. Старт нового платежа
             if 'New payment started' in line:
-                # If a transaction is already in progress, finalize it as incomplete
                 if current_tx:
                     transactions.append(current_tx)
                     last_tx = current_tx
-                current_tx = Transaction(session_id=session_id, phone=phone, account=account)
+
+                current_tx = Transaction(
+                    session_id=session_id,
+                    phone=phone,
+                    account=account,
+                )
                 continue
 
-            # Completion markers
-            if (
-                'PaymentComplete.html' in line
-                or 'Initializing payment complete' in line
-            ):
+            # Все факты после этого пытаемся привязать либо к активному платежу,
+            # либо к последнему платежу, если активного уже нет.
+            target_tx = current_tx or last_tx
+
+            if target_tx:
+                # 2. Ошибки — ищем всегда, независимо от других фактов в строке
+                errors = detect_errors_in_line(line, line_no)
+                if errors:
+                    target_tx.errors.extend(errors)
+
+                # 3. Купюры
+                bill_match = patterns.BILL_RE.search(line)
+                if bill_match:
+                    denom = int(bill_match.group(1))
+                    count = int(bill_match.group(2))
+                    target_tx.bills.append(Bill(denomination=denom, count=count))
+
+                # 4. NamedFields / сумма операции
+                amt_match = patterns.AMOUNTALL_RE.search(line)
+                if amt_match:
+                    try:
+                        target_tx.expected_amount = float(amt_match.group(1))
+                    except ValueError:
+                        pass
+
+                # 5. Cheque info: сумма
+                cheque_amount = patterns.CHEQUE_AMOUNT_RE.search(line)
+                if cheque_amount:
+                    try:
+                        target_tx.expected_amount = float(cheque_amount.group(1))
+                    except ValueError:
+                        pass
+
+                # 6. Cheque info: зачислено
+                cheque_credited = patterns.CHEQUE_CREDITED_RE.search(line)
+                if cheque_credited:
+                    try:
+                        target_tx.credited_amount = float(cheque_credited.group(1))
+                    except ValueError:
+                        pass
+
+            # 7. Завершение приема купюр — это не конец транзакции
+            if 'Initializing payment complete' in line:
+                if current_tx:
+                    current_tx.cash_collection_completed = True
+
+            # 8. Настоящее завершение платежа
+            if 'PaymentComplete.html' in line:
                 if current_tx:
                     current_tx.completed = True
                     transactions.append(current_tx)
                     last_tx = current_tx
                     current_tx = None
-                continue
-
-            # Within active payment
-            if current_tx:
-                # Bills
-                bill_match = patterns.BILL_RE.search(line)
-                if bill_match:
-                    denom = int(bill_match.group(1))
-                    count = int(bill_match.group(2))
-                    current_tx.bills.append(Bill(denomination=denom, count=count))
-                    continue
-                # Error codes
-                errors = detect_errors_in_line(line, line_no)
-                if errors:
-                    current_tx.errors.extend(errors)
-                # NamedFields expected amount
-                amt_match = patterns.AMOUNTALL_RE.search(line)
-                if amt_match:
-                    try:
-                        current_tx.expected_amount = float(amt_match.group(1))
-                    except ValueError:
-                        pass
-                    continue
-
-            # Outside active payment, associate cheque details with last transaction
-            if current_tx is None and last_tx:
-                cheque_amount = patterns.CHEQUE_AMOUNT_RE.search(line)
-                if cheque_amount:
-                    try:
-                        last_tx.expected_amount = float(cheque_amount.group(1))
-                    except ValueError:
-                        pass
-                    continue
-                cheque_credited = patterns.CHEQUE_CREDITED_RE.search(line)
-                if cheque_credited:
-                    try:
-                        last_tx.credited_amount = float(cheque_credited.group(1))
-                    except ValueError:
-                        pass
-                    continue
 
         # Finalize any open transaction at end of session
         if current_tx:

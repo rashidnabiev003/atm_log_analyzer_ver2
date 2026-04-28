@@ -8,9 +8,9 @@ ERROR_PATTERNS: Dict[str, Pattern[str]] = {
     'stacker_opened=false': re.compile(r'stacker_opened\s*=\s*false', re.IGNORECASE),
 }
 
-SESSION_RE = re.compile(r'SESSION=([^,\s]+)')
-PHONE_RE = re.compile(r'NUMBER=(\d{9,12})')
-ACCOUNT_RE = re.compile(r'ACCOUNT=([^,\s]+)')
+SESSION_RE = re.compile(r'\bSESSION\s*=\s*([^,\s]+)', re.IGNORECASE)
+PHONE_RE = re.compile(r'\bNUMBER\s*=\s*(\+?\d{9,15})', re.IGNORECASE)
+ACCOUNT_RE = re.compile(r'\bACCOUNT\s*=\s*([^,\s]+)', re.IGNORECASE)
 
 # Generic pattern for capturing unknown error tokens containing 'error'.
 GENERIC_ERROR_RE = re.compile(r'([A-Za-z0-9_]+error[A-Za-z0-9_]*)', re.IGNORECASE)
