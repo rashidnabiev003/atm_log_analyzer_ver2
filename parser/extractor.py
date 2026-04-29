@@ -5,6 +5,25 @@ from configs.models import Transaction, Bill, DetectedError
 from configs.error_rules import ERROR_RULES
 from session.sessionizer import split_sessions
 
+def detect_errors_in_line(line: str, line_no: int) -> list[DetectedError]:
+    result = []
+
+    for rule in ERROR_RULES:
+        if rule.pattern.search(line):
+            result.append(
+                DetectedError(
+                    code=rule.code,
+                    title=rule.title,
+                    category=rule.category,
+                    severity=rule.severity,
+                    line_no=line_no,
+                    raw=line,
+                    conclusion=rule.conclusion,
+                )
+            )
+
+    return result
+
 
 def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
     transactions: List[Transaction] = []
@@ -33,9 +52,14 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         # State variables for transactions within this session
         current_tx: Optional[Transaction] = None
         last_tx: Optional[Transaction] = None
+        pending_errors: list[DetectedError] = []
+        inside_named_fields = False
+
 
         for line_no, line in enumerate(session_lines, start=1):
             # 1. Старт нового платежа
+            line_errors = detect_errors_in_line(line, line_no)
+
             if patterns.PAYMENT_START_RE.search(line):
                 if current_tx:
                     transactions.append(current_tx)
@@ -46,6 +70,16 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     phone=phone,
                     account=account,
                 )
+
+                inside_named_fields = False
+
+                if pending_errors:
+                    current_tx.errors.extend(pending_errors)
+                    pending_errors = []
+                
+                if line_errors:
+                    current_tx.errors.extend(line_errors)
+
                 continue
 
             # Все факты после этого пытаемся привязать либо к активному платежу,
@@ -55,9 +89,8 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
             if target_tx:
 
                 # 3. Купюры
-                errors = detect_errors_in_line(line, line_no)
-                if errors:
-                    target_tx.errors.extend(errors)
+                if line_errors:
+                    target_tx.errors.extend(line_errors)
 
                 bill_match = patterns.BILL_RE.search(line)
                 if bill_match:
@@ -70,47 +103,49 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                         target_tx.bill_row_keys.add(row_key)
                         target_tx.bills.append(Bill(denomination=denom, count=count))
 
+                if patterns.MONEY_FIELD_RE.search(line):
+                        inside_named_fields = True
+                
+                if inside_named_fields:
 
-                payment_fields = patterns.parse_payment_fields(line)
+                    payment_fields = patterns.parse_payment_fields(line)
+                    
+                    if payment_fields:
+                        
+                        target_tx.named_fields.update(payment_fields)
 
-                if payment_fields:
-                    target_tx.named_fields.update(payment_fields)
+                        amount_all = (
+                            payment_fields.get("AMOUNTALL_TJS")
+                            or payment_fields.get("AMOUNTALL")
+                        )
 
-                    amount_all = (
-                        payment_fields.get("AMOUNTALL_TJS")
-                        or payment_fields.get("AMOUNTALL")
-                    )
+                        amount = (
+                            payment_fields.get("AMOUNT_TJS")
+                            or payment_fields.get("AMOUNT")
+                        )
 
-                    amount = (
-                        payment_fields.get("AMOUNT_TJS")
-                        or payment_fields.get("AMOUNT")
-                    )
+                        comission = (
+                            payment_fields.get("COMISSION_TJS")
+                            or payment_fields.get("COMISSION")
+                        )
 
-                    comission = (
-                        payment_fields.get("COMISSION_TJS")
-                        or payment_fields.get("COMISSION")
-                    )
+                        local_datetime = payment_fields.get("LOCAL_DATETIME")
 
-                    local_datetime = (
-                        payment_fields.get("LOCAL_DATIME")
-                        or payment_fields.get("LOCAL_DATETIME")
-                    )
+                        parsed_amount_all = patterns.parse_money(amount_all)
+                        parsed_amount = patterns.parse_money(amount)
+                        parsed_comission = patterns.parse_money(comission)
 
-                    parsed_amount_all = patterns.parse_money(amount_all)
-                    parsed_amount = patterns.parse_money(amount)
-                    parsed_comission = patterns.parse_money(comission)
+                        if parsed_amount_all is not None:
+                            target_tx.expected_amount = parsed_amount_all
 
-                    if parsed_amount_all is not None:
-                        target_tx.expected_amount = parsed_amount_all
+                        if parsed_amount is not None:
+                            target_tx.credited_amount = parsed_amount
 
-                    if parsed_amount is not None:
-                        target_tx.credited_amount = parsed_amount
+                        if parsed_comission is not None:
+                            target_tx.comission_amount = parsed_comission
 
-                    if parsed_comission is not None:
-                        target_tx.comission_amount = parsed_comission
-
-                    if local_datetime:
-                        target_tx.local_datetime = local_datetime
+                        if local_datetime:
+                            target_tx.local_datetime = local_datetime
 
             # 7. Завершение приема купюр — это не конец транзакции
             if patterns.INIT_PAYMENT_COMPLETE_RE.search(line):
@@ -124,28 +159,10 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     transactions.append(current_tx)
                     last_tx = current_tx
                     current_tx = None
+                    inside_named_fields = False
 
         # Finalize any open transaction at end of session
         if current_tx:
             transactions.append(current_tx)
 
     return transactions
-
-def detect_errors_in_line(line: str, line_no: int) -> list[DetectedError]:
-    result = []
-
-    for rule in ERROR_RULES:
-        if rule.pattern.search(line):
-            result.append(
-                DetectedError(
-                    code=rule.code,
-                    title=rule.title,
-                    category=rule.category,
-                    severity=rule.severity,
-                    line_no=line_no,
-                    raw=line,
-                    conclusion=rule.conclusion,
-                )
-            )
-
-    return result

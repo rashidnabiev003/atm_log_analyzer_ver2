@@ -82,7 +82,7 @@ class Transaction:
                     reasons.append(
                         f"Некорректное зачисление по NamedFields: "
                         f"AMOUNTALL={self.expected_amount}, "
-                        f"COMISSION={self.commision_amount}, "
+                        f"COMISSION={self.comission_amount}, "
                         f"ожидаемый AMOUNT={expected_credited}, "
                         f"фактический AMOUNT={self.credited_amount}"
                     )
