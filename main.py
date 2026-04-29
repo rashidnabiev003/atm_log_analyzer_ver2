@@ -11,63 +11,73 @@ from report.investigator import investigate
 from report.reporter import print_investigation_report
 
 
-def existing_file_or_none(path: str | None) -> str | None:
-    if not path:
-        return None
-
-    p = Path(path)
-    if not p.exists():
-        raise FileNotFoundError(f"Файл не найден: {path}")
-
-    return str(p)
+KIOSK_LOG_PATH = Path("log.txt")
+PAYMENTS_THREAD_LOG_PATH = Path("PaymentsThread.log")
+VALIDATOR_LOG_PATH = Path("Validator.log")
 
 
-def main():
+def required_existing_file(path: Path, *, source_name: str) -> str:
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Не найден обязательный лог {source_name}: {path}. "
+        )
+    return str(path)
+
+
+def optional_existing_file(path: Path) -> str | None:
+    return str(path) if path.exists() else None
+
+
+def get_log_sources() -> dict[str, str | None]:
+    """
+    Единая точка, где сейчас задаются пути к трём логам.
+
+    Сейчас:
+    - kiosk_log анализируется;
+    - payments_log пока только фиксируется в отчете;
+    - validator_log пока только фиксируется в отчете.
+    """
+    return {
+        "kiosk_log": required_existing_file(
+            KIOSK_LOG_PATH,
+            source_name="DPSKiosk.log",
+        ),
+        "payments_log": optional_existing_file(PAYMENTS_THREAD_LOG_PATH),
+        "validator_log": optional_existing_file(VALIDATOR_LOG_PATH),
+    }
+
+
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--kiosk-log",
-        required=True,
-        help="Путь к DPSKiosk.log",
-    )
-
-    parser.add_argument(
-        "--payments-log",
-        required=False,
-        help="Путь к PaymentsThread.log",
-    ) #TODO Анализ
-
-    parser.add_argument(
-        "--validator-log",
-        required=False,
-        help="Путь к Validator.log",
-    )#TODO Анализ
-
-    parser.add_argument("--phone", required=True)
+    parser.add_argument("phone", nargs="?", help="Номер телефона клиента")
+    parser.add_argument("--phone", dest="phone_option", help="Номер телефона клиента")
     parser.add_argument("--account")
     parser.add_argument("--claimed-amount", type=Decimal)
 
     args = parser.parse_args()
+    args.phone_number = args.phone_option or args.phone
 
-    kiosk_log = existing_file_or_none(args.kiosk_log)
-    payments_log = existing_file_or_none(args.payments_log)
-    validator_log = existing_file_or_none(args.validator_log)
+    if not args.phone_number:
+        parser.error("нужно указать номер телефона: main.py <phone> или main.py --phone <phone>")
+
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+    log_sources = get_log_sources()
 
     query = ClientQuery(
-        phone_number=args.phone,
+        phone_number=args.phone_number,
         account=args.account,
         claimed_amount=args.claimed_amount,
     )
 
-    transactions = extract_transactions(read_file(kiosk_log))
+    transactions = extract_transactions(read_file(log_sources["kiosk_log"]))
 
     result = investigate(transactions, query)
-
-    result["log_sources"] = {
-        "kiosk_log": kiosk_log,
-        "payments_log": payments_log,
-        "validator_log": validator_log,
-    }
+    result["log_sources"] = log_sources
 
     print_investigation_report(result)
 

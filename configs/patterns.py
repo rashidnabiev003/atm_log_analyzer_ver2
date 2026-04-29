@@ -63,8 +63,7 @@ def detect_errors(line: str) -> List[str]:
 
 def parse_payment_fields(line: str) -> dict[str, str]:
     """
-    Парсим только системные поля платежа.
-    Не зависит от русского текста и не требует наличия 'NamedFields:' в строке.
+    Парсинг системных платежей.
     """
     result: dict[str, str] = {}
 
