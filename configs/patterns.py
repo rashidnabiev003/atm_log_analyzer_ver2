@@ -17,9 +17,13 @@ SESSION_START_INFO_RE = re.compile(r"GetNewSessionNumber", re.IGNORECASE)
 
 PAYMENT_START_RE = re.compile(r"New\s+payment\s+started", re.IGNORECASE)
 
-PAYMENT_COMPLETE_RE = re.compile(r"PaymentComplete\s*\.?\s*html|PaymentComplete\.html", re.IGNORECASE)
-
-SESSION_PAYMENT_COMPLETE_RE = re.compile(r"Payment\s+finished", re.IGNORECASE)
+PAYMENT_COMPLETE_RE = re.compile(
+    r"PaymentComplete\s*\.?\s*html"
+    r"|PaymentComplete\.html"
+    r"|Payment\s*finished"
+    r"|PaymentFinished",
+    re.IGNORECASE,
+)
 
 INIT_PAYMENT_COMPLETE_RE = re.compile(r"Initializing\s+payment\s+complete", re.IGNORECASE)
 
