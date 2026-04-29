@@ -19,10 +19,16 @@ PAYMENT_START_RE = re.compile(r"New\s+payment\s+started", re.IGNORECASE)
 
 PAYMENT_COMPLETE_RE = re.compile(r"PaymentComplete\s*\.?\s*html|PaymentComplete\.html", re.IGNORECASE)
 
+SESSION_PAYMENT_COMPLETE_RE = re.compile(r"Payment\s+finished", re.IGNORECASE)
+
 INIT_PAYMENT_COMPLETE_RE = re.compile(r"Initializing\s+payment\s+complete", re.IGNORECASE)
 
 MONEY_FIELD_RE = re.compile(
-    r"\b(?P<key>AMOUNTALL_TJS|AMOUNTALL|AMOUNT_TJS|AMOUNT|COMISSION_TJS|COMISSION)"
+    r"\b(?P<key>"
+    r"AMOUNTALL_TJS|AMOUNTALL|"
+    r"AMOUNT_TJS|AMOUNT|"
+    r"COMISSION"
+    r")"
     r"\s*[:=]\s*"
     r"(?P<value>[+-]?\d+(?:[.,]\d+)?)",
     re.IGNORECASE,

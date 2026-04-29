@@ -78,13 +78,11 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
                 continue
 
-            target_tx = current_tx or last_tx
+            target_tx = current_tx
 
             if line_errors and not target_tx:
                 pending_errors.extend(line_errors)
 
-            # ВАЖНО: сначала отмечаем Initializing payment complete,
-            # потом парсим AMOUNTALL/AMOUNT/COMISSION.
             if patterns.INIT_PAYMENT_COMPLETE_RE.search(line):
                 if current_tx:
                     current_tx.cash_collection_completed = True

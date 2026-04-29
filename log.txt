@@ -17,6 +17,7 @@
 20.04.2026 14.31.36.000 INFO Initializing payment complete.
 20.04.2026 14.31.37.444 NamedFields: Номер телефона=992900000000
 AMOUNTALL_TJS=300.00
+COMISSION=4.00
 SERVICE=wallet
  Cheque info:
 Сумма : 300.00 TJS
