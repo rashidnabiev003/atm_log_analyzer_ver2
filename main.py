@@ -68,6 +68,10 @@ def main() -> None:
     args = parse_args()
     log_sources = get_log_sources()
 
+    print("DEBUG log sources:")
+    for name, path in log_sources.items():
+        print(f"- {name}: {path}")
+
     query = ClientQuery(
         phone_number=args.phone_number,
         account=args.account,
