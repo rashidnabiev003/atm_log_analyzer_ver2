@@ -31,7 +31,8 @@ MONEY_FIELD_RE = re.compile(
     r"\b(?P<key>"
     r"AMOUNTALL_TJS|AMOUNTALL|"
     r"AMOUNT_TJS|AMOUNT|"
-    r"COMISSION"
+    r"COMISSION_TJS|COMISSION|"
+    r"COMMISSION_TJS|COMMISSION"
     r")"
     r"\s*[:=]\s*"
     r"(?P<value>[+-]?\d+(?:[.,]\d+)?)",
@@ -73,17 +74,40 @@ def detect_errors(line: str) -> List[str]:
 
 def parse_payment_fields(line: str) -> dict[str, str]:
     """
-    Парсинг системных платежей.
+    Парсинг системных полей платежа.
+
+    На выходе нормализуем ключи:
+    - AMOUNT_TJS -> AMOUNT
+    - COMISSION_TJS / COMMISSION / COMMISSION_TJS -> COMISSION
+    - LOCAL_DATIME -> LOCAL_DATETIME
     """
     result: dict[str, str] = {}
 
+    aliases = {
+        "AMOUNTALL_TJS": "AMOUNTALL_TJS",
+        "AMOUNTALL": "AMOUNTALL",
+
+        "AMOUNT_TJS": "AMOUNT",
+        "AMOUNT": "AMOUNT",
+
+        "COMISSION_TJS": "COMISSION",
+        "COMISSION": "COMISSION",
+        "COMMISSION_TJS": "COMISSION",
+        "COMMISSION": "COMISSION",
+
+        "LOCAL_DATIME": "LOCAL_DATETIME",
+        "LOCAL_DATETIME": "LOCAL_DATETIME",
+    }
+
     for match in MONEY_FIELD_RE.finditer(line):
-        key = match.group("key").upper()
+        raw_key = match.group("key").upper()
+        key = aliases.get(raw_key, raw_key)
         value = match.group("value").strip()
         result[key] = value
 
     for match in LOCAL_DATETIME_RE.finditer(line):
-        key = match.group("key").upper()
+        raw_key = match.group("key").upper()
+        key = aliases.get(raw_key, raw_key)
         value = match.group("value").strip()
         result[key] = value
 

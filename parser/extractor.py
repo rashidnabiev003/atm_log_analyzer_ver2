@@ -106,7 +106,6 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
                 has_real_payment_fields = (
                     "AMOUNTALL" in line_upper
-                    or "LOCAL_DATIME" in line_upper
                     or "LOCAL_DATETIME" in line_upper
                 )
 
