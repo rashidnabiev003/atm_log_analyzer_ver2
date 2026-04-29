@@ -16,11 +16,9 @@ PAYMENTS_THREAD_LOG_PATH = Path("PaymentsThread.log")
 VALIDATOR_LOG_PATH = Path("Validator.log")
 
 
-def required_existing_file(path: Path, *, source_name: str) -> str:
+def required_existing_file(path: Path) -> str:
     if not path.exists():
-        raise FileNotFoundError(
-            f"Не найден обязательный лог {source_name}: {path}. "
-        )
+        raise FileNotFoundError(f"Файл не найден: {path}")
     return str(path)
 
 
@@ -38,13 +36,10 @@ def get_log_sources() -> dict[str, str | None]:
     - validator_log пока только фиксируется в отчете.
     """
     return {
-        "kiosk_log": required_existing_file(
-            KIOSK_LOG_PATH,
-            source_name="DPSKiosk.log",
-        ),
-        "payments_log": optional_existing_file(PAYMENTS_THREAD_LOG_PATH),
-        "validator_log": optional_existing_file(VALIDATOR_LOG_PATH),
-    }
+    "kiosk_log": required_existing_file(KIOSK_LOG_PATH),
+    "payments_log": optional_existing_file(PAYMENTS_THREAD_LOG_PATH),
+    "validator_log": optional_existing_file(VALIDATOR_LOG_PATH),
+}
 
 
 def parse_args() -> argparse.Namespace:

@@ -56,7 +56,6 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
 
         for line_no, line in enumerate(session_lines, start=1):
-            # 1. Старт нового платежа
             line_errors = detect_errors_in_line(line, line_no)
 
             if patterns.PAYMENT_START_RE.search(line):
@@ -73,19 +72,24 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                 if pending_errors:
                     current_tx.errors.extend(pending_errors)
                     pending_errors = []
-                
+
                 if line_errors:
                     current_tx.errors.extend(line_errors)
 
                 continue
 
-            # Все факты после этого пытаемся привязать либо к активному платежу,
-            # либо к последнему платежу, если активного уже нет.
             target_tx = current_tx or last_tx
 
-            if target_tx:
+            if line_errors and not target_tx:
+                pending_errors.extend(line_errors)
 
-                # 3. Купюры
+            # ВАЖНО: сначала отмечаем Initializing payment complete,
+            # потом парсим AMOUNTALL/AMOUNT/COMISSION.
+            if patterns.INIT_PAYMENT_COMPLETE_RE.search(line):
+                if current_tx:
+                    current_tx.cash_collection_completed = True
+
+            if target_tx:
                 if line_errors:
                     target_tx.errors.extend(line_errors)
 
@@ -99,31 +103,31 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     if row_key not in target_tx.bill_row_keys:
                         target_tx.bill_row_keys.add(row_key)
                         target_tx.bills.append(Bill(denomination=denom, count=count))
-                
-                if target_tx.cash_collection_completed:
+
+                line_upper = line.upper()
+
+                has_real_payment_fields = (
+                    "AMOUNTALL" in line_upper
+                    or "LOCAL_DATIME" in line_upper
+                    or "LOCAL_DATETIME" in line_upper
+                )
+
+                # Защита от AMOUNT=10 в GetNewSessionNumber:
+                # простой AMOUNT парсим только после Initializing payment complete.
+                if target_tx.cash_collection_completed or has_real_payment_fields:
                     payment_fields = patterns.parse_payment_fields(line)
                 else:
                     payment_fields = {}
-                    
+
                 if payment_fields:
-                    
                     target_tx.named_fields.update(payment_fields)
 
                     amount_all = (
                         payment_fields.get("AMOUNTALL_TJS")
                         or payment_fields.get("AMOUNTALL")
                     )
-
-                    amount = (
-                        payment_fields.get("AMOUNT_TJS")
-                        or payment_fields.get("AMOUNT")
-                    )
-
-                    comission = (
-                        payment_fields.get("COMISSION_TJS")
-                        or payment_fields.get("COMISSION")
-                    )
-
+                    amount = payment_fields.get("AMOUNT")
+                    comission = payment_fields.get("COMISSION")
                     local_datetime = payment_fields.get("LOCAL_DATETIME")
 
                     parsed_amount_all = patterns.parse_money(amount_all)
@@ -142,12 +146,6 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     if local_datetime:
                         target_tx.local_datetime = local_datetime
 
-            # 7. Завершение приема купюр — это не конец транзакции
-            if patterns.INIT_PAYMENT_COMPLETE_RE.search(line):
-                if current_tx:
-                    current_tx.cash_collection_completed = True
-
-            # 8. Настоящее завершение платежа
             if patterns.PAYMENT_COMPLETE_RE.search(line):
                 if current_tx:
                     current_tx.completed = True
