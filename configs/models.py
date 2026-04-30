@@ -69,8 +69,7 @@ class Transaction:
         if not self.completed:
             if self.cash_collection_completed:
                 reasons.append(
-                    "Платёжный этап завершён через Initializing payment complete, "
-                    "но финальный PaymentComplete.html не найден"
+                    "Платёжный этап завершён через Initializing payment complete"
                 )
             else:
                 reasons.append("Транзакция не завершена")

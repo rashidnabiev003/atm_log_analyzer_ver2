@@ -49,7 +49,6 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                 if m:
                     account = m.group(1)
 
-        # State variables for transactions within this session
         current_tx: Optional[Transaction] = None
         pending_errors: list[DetectedError] = []
         inside_cheque_fields = False

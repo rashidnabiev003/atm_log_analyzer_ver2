@@ -1,16 +1,15 @@
-import sys
 import argparse
-from typing import Iterable 
+from decimal import Decimal
 from pathlib import Path
 
 from configs.query import ClientQuery
-from decimal import Decimal
 from parser.reader import read_log_records
 from parser.dps_extractor import extract_transactions
 from parser.validator_extractor import extract_validator_cycles
+from parser.payments_extractor import extract_payment_errors
 from report.investigator import investigate
 from report.reporter import print_investigation_report
-from parser.payments_extractor import extract_payment_errors, group_payment_errors_by_session
+
 
 KIOSK_LOG_PATH = Path("log.txt")
 PAYMENTS_THREAD_LOG_PATH = Path("PaymentsThread.log")
@@ -31,16 +30,13 @@ def get_log_sources() -> dict[str, str | None]:
     """
     Единая точка, где сейчас задаются пути к трём логам.
 
-    Сейчас:
-    - kiosk_log анализируется;
-    - payments_log пока только фиксируется в отчете;
-    - validator_log пока только фиксируется в отчете.
+    Позже это место можно заменить на получение файлов/путей из БД.
     """
     return {
-    "kiosk_log": required_existing_file(KIOSK_LOG_PATH),
-    "payments_log": optional_existing_file(PAYMENTS_THREAD_LOG_PATH),
-    "validator_log": optional_existing_file(VALIDATOR_LOG_PATH),
-}
+        "kiosk_log": required_existing_file(KIOSK_LOG_PATH),
+        "payments_log": optional_existing_file(PAYMENTS_THREAD_LOG_PATH),
+        "validator_log": optional_existing_file(VALIDATOR_LOG_PATH),
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,10 +60,6 @@ def main() -> None:
     args = parse_args()
     log_sources = get_log_sources()
 
-    print("DEBUG log sources:")
-    for name, path in log_sources.items():
-        print(f"- {name}: {path}")
-
     query = ClientQuery(
         phone_number=args.phone_number,
         account=args.account,
@@ -77,39 +69,19 @@ def main() -> None:
     transactions = extract_transactions(read_log_records(log_sources["kiosk_log"]))
 
     validator_cycles = []
-
     if log_sources["validator_log"]:
         validator_cycles = extract_validator_cycles(log_sources["validator_log"])
 
-    print(f"DEBUG validator cycles: {len(validator_cycles)}")
-    for i, cycle in enumerate(validator_cycles[:10], start=1):
-        print(
-            f"DEBUG VALIDATOR {i}: "
-            f"start={cycle.started_at}, finish={cycle.finished_at}, "
-            f"complete={cycle.is_complete}, "
-            f"states={[event.state for event in cycle.states]}"
-        )
-
     payment_errors = []
-
     if log_sources["payments_log"]:
         payment_errors = extract_payment_errors(log_sources["payments_log"])
 
-    payment_errors_by_session = group_payment_errors_by_session(payment_errors)
-
-    print(f"DEBUG payment errors: {len(payment_errors)}")
-    for i, error in enumerate(payment_errors[:10], start=1):
-        print(
-            f"DEBUG PAYMENT ERROR {i}: "
-            f"session={error.session_id}, "
-            f"time={error.timestamp}, "
-            f"code={error.code}, "
-            f"severity={error.severity}, "
-            f"line={error.line_no}"
-        )
-    print(f"  raw={error.raw[:300]}")
-
-    result = investigate(transactions, query)
+    result = investigate(
+        transactions,
+        query,
+        payment_errors=payment_errors,
+        validator_cycles=validator_cycles,
+    )
     result["log_sources"] = log_sources
 
     print_investigation_report(result)

@@ -1,11 +1,72 @@
 from decimal import Decimal
+
 from configs.query import ClientQuery
 from configs.models import Transaction
 
 
+def format_payment_errors(errors: list) -> str:
+    if not errors:
+        return "нет"
+
+    parts = []
+
+    for err in errors:
+        parts.append(
+            "\n".join(
+                [
+                    f"- [{err.severity}] {err.code}: {err.title}",
+                    f"  Категория: {err.category}",
+                    f"  Время: {err.timestamp if err.timestamp is not None else 'N/A'}",
+                    f"  Сессия: {err.session_id if err.session_id is not None else 'N/A'}",
+                    f"  Строка: {err.line_no}",
+                    f"  Вывод: {err.conclusion}",
+                    f"  Фрагмент: {err.raw[:500]}",
+                ]
+            )
+        )
+
+    return "\n".join(parts)
+
+
+def format_validator_cycles(cycles: list) -> str:
+    if not cycles:
+        return "нет"
+
+    parts = []
+
+    for idx, cycle in enumerate(cycles, start=1):
+        states = [event.state for event in cycle.states]
+
+        parts.append(
+            "\n".join(
+                [
+                    f"- Цикл приёма купюр {idx}",
+                    f"  Начало: {cycle.started_at if cycle.started_at is not None else 'N/A'}",
+                    f"  Конец: {cycle.finished_at if cycle.finished_at is not None else 'N/A'}",
+                    f"  Завершён корректно: {'да' if cycle.is_complete else 'нет'}",
+                    f"  Состояния: {states}",
+                    f"  Строки: {cycle.line_start}–{cycle.line_end}",
+                ]
+            )
+        )
+
+    return "\n".join(parts)
+
+
 def format_investigation_report(result: dict) -> str:
     query: ClientQuery = result["query"]
-    transactions: list[Transaction] = result["transactions"]
+    transaction_reports = result.get("transaction_reports")
+
+    if transaction_reports is None:
+        transactions: list[Transaction] = result["transactions"]
+        transaction_reports = [
+            {
+                "transaction": tx,
+                "payment_errors": [],
+                "validator_cycles": [],
+            }
+            for tx in transactions
+        ]
 
     parts: list[str] = []
 
@@ -15,18 +76,39 @@ def format_investigation_report(result: dict) -> str:
     parts.append(
         f"Заявленная сумма: {query.claimed_amount if query.claimed_amount is not None else 'не указана'}"
     )
-    parts.append(f"Найдено транзакций: {len(transactions)}")
+    parts.append(f"Найдено транзакций: {len(transaction_reports)}")
+    parts.append(f"Ошибок PaymentsThread всего: {result.get('payment_errors_total', 0)}")
+    parts.append(f"Циклов Validator всего: {result.get('validator_cycles_total', 0)}")
     parts.append("")
 
-    if not transactions:
+    log_sources = result.get("log_sources", {})
+    if log_sources:
+        parts.append("Источники логов:")
+        parts.append(f"- DPSKiosk: {log_sources.get('kiosk_log') or 'не найден'}")
+        parts.append(f"- PaymentsThread: {log_sources.get('payments_log') or 'не найден'}")
+        parts.append(f"- Validator: {log_sources.get('validator_log') or 'не найден'}")
+        parts.append("")
+
+    if not transaction_reports:
         parts.append("По указанным данным транзакции не найдены.")
         return "\n".join(parts)
 
-    for idx, tx in enumerate(transactions, start=1):
+    for idx, item in enumerate(transaction_reports, start=1):
+        tx = item["transaction"]
+        payment_errors = item.get("payment_errors", [])
+        validator_cycles = item.get("validator_cycles", [])
+
         parts.append(f"--- Транзакция {idx} ---")
         parts.append(tx.report())
 
-        # Сравнение с заявленной клиентом суммой включаем только если она задана.
+        parts.append("")
+        parts.append("Ошибки PaymentsThread:")
+        parts.append(format_payment_errors(payment_errors))
+
+        parts.append("")
+        parts.append("Циклы Validator:")
+        parts.append(format_validator_cycles(validator_cycles))
+
         if query.claimed_amount is not None:
             detected = Decimal(str(tx.total_inserted))
             diff = query.claimed_amount - detected
