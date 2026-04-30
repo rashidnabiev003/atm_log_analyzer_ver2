@@ -27,14 +27,6 @@ CHEQUE_FIELDS_BLOCK_RE = re.compile(
     re.IGNORECASE,
 )
 
-PAYMENT_COMPLETE_RE___ = re.compile(
-    r"PaymentComplete\s*\.?\s*html"
-    r"|PaymentComplete\.html"
-    r"|Payment\s*finished\.?"
-    r"|PaymentFinished\.?",
-    re.IGNORECASE,
-)
-
 PAYMENT_COMPLETE_RE = re.compile(
     r"Payment\s*finished\.?"
     r"|PaymentFinished\.?",
@@ -59,11 +51,17 @@ COMISSION_RE = re.compile(
 )
 
 LOCAL_DATIME_RE = re.compile(
-    r"\bLOCAL_DATIME\b\s*[:=]\s*"
+    r"\b(?:LOCAL_DATIME|DATETIME)\b"
+    r"\s*[:=]\s*"
+    r"[\"']?"
     r"(?P<value>"
     r"\d{2}[./]\d{2}[./]\d{4}"
-    r"(?:\s+\d{2}[:.]\d{2}[:.]\d{2}(?:[.:]\d{1,6})?)?"
-    r")",
+    r"(?:[ T]+"
+    r"\d{2}[:.]\d{2}[:.]\d{2}"
+    r"(?:[.:]\d{1,6})?"
+    r")"
+    r")"
+    r"[\"']?",
     re.IGNORECASE,
 )
 
@@ -90,6 +88,8 @@ LOG_TIMESTAMP_RE = re.compile(
 
 
 ### PAYMENT PATTERNS
+
+### PARSERS
 
 def parse_money(value: str | None) -> float | None:
     if value is None:
