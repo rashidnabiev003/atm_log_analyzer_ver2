@@ -1,12 +1,6 @@
 import re
 from typing import List, Dict, Pattern
 
-ERROR_PATTERNS: Dict[str, Pattern[str]] = {
-    'Lenght_error': re.compile(r'Lenght_error', re.IGNORECASE),
-    '#28': re.compile(r'#28', re.IGNORECASE),
-    'stacker_opened=false': re.compile(r'stacker_opened\s*=\s*false', re.IGNORECASE),
-}
-
 SESSION_RE = re.compile(r'\bSESSION\s*=\s*([^,\s]+)', re.IGNORECASE)
 PHONE_RE = re.compile(r'\bNUMBER\s*=\s*(\+?\d{9,15})', re.IGNORECASE)
 ACCOUNT_RE = re.compile(r'\bACCOUNT\s*=\s*([^,\s]+)', re.IGNORECASE)
@@ -60,16 +54,6 @@ LOCAL_DATIME_RE = re.compile(
     r")",
     re.IGNORECASE,
 )
-
-
-def detect_errors(line: str) -> List[str]:
-    found: List[str] = []
-    # Check for known errors
-    for key, pattern in ERROR_PATTERNS.items():
-        if pattern.search(line):
-            found.append(key)
-    return found
-
 
 def parse_money(value: str | None) -> float | None:
     if value is None:

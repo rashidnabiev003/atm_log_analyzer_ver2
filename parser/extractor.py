@@ -2,7 +2,7 @@ from typing import Iterable, List, Optional
 
 from configs import patterns
 from configs.models import Transaction, Bill, DetectedError
-from configs.error_rules import ERROR_RULES
+from configs.dps_error_rules import ERROR_RULES
 from session.sessionizer import split_sessions
 
 def detect_errors_in_line(line: str, line_no: int) -> list[DetectedError]:

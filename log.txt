@@ -5,7 +5,8 @@
 100      TJS   1
 200      TJS   1
 20.04.2026 14.31.36.000 INFO Initializing payment complete.
-20.04.2026 14.31.37.444 NamedFields: Номер телефона=992900000000 Fields sdapn sdsd:
+20.04.2026 14.31.37.444 T=007452 TForm1:MakeTextForPrint[какое-то число рандомное для нас] NamedFields: Номер телефона=992900000000, ФИО=ывффвыафуы Fields sdapn sdsd:
+Fields for Cheque: NUMBER=992900000000
 AMOUNTALL_TJS=300.00
 COMISSION=4.00
 SERVICE=wallet

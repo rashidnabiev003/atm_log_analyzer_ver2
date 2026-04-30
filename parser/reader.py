@@ -1,7 +1,7 @@
-from typing import Iterator, TextIO
-from pathlib import Path
 import io
 import re
+from typing import Iterator, TextIO
+from pathlib import Path
 
 
 LOG_RECORD_START_RE = re.compile(
@@ -25,28 +25,11 @@ def read_file(path: str | Path, *, encoding: str = "utf-8") -> Iterator[str]:
 
 
 def split_physical_line(line: str) -> list[str]:
-    """
-    Если в одной физической строке склеено несколько timestamp-log records,
-    режем их обратно.
-
-    Пример:
-    20.04.2026 14.30.00.123 ... 20.04.2026 14.31.00.555 ...
-
-    станет двумя record.
-    """
     parts = [part.strip() for part in LOG_RECORD_SPLIT_RE.split(line) if part.strip()]
     return parts or [line]
 
 
 def read_log_records(path: str | Path, *, encoding: str = "utf-8") -> Iterator[str]:
-    """
-    Читает файл как timestamp-records.
-
-    Важно:
-    - timestamp может быть в начале физической строки;
-    - timestamp может быть внутри длинной физической строки;
-    - строки без timestamp приклеиваются к предыдущему record.
-    """
     current_record: list[str] = []
 
     with io.open(path, "r", encoding=encoding, errors="ignore") as f:
