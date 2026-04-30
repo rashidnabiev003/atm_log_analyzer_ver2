@@ -61,7 +61,6 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
             if patterns.PAYMENT_START_RE.search(line):
                 if current_tx:
                     transactions.append(current_tx)
-                    last_tx = current_tx
 
                 current_tx = Transaction(
                     session_id=session_id,
@@ -91,10 +90,9 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                 if line_errors:
                     target_tx.errors.extend(line_errors)
 
-                bill_match = patterns.BILL_RE.search(line)
-                if bill_match:
-                    denom = int(bill_match.group(1))
-                    count = int(bill_match.group(2))
+                for bill_match in patterns.BILL_RE.finditer(line):
+                    denom = int(bill_match.group("denom"))
+                    count = int(bill_match.group("count"))
 
                     row_key = f"{denom}:TJS:{count}"
 
@@ -102,27 +100,15 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                         target_tx.bill_row_keys.add(row_key)
                         target_tx.bills.append(Bill(denomination=denom, count=count))
 
-                line_upper = line.upper()
+                payment_fields: dict[str, str] = {}
 
-                has_real_payment_fields = (
-                    "AMOUNTALL" in line_upper
-                    or "LOCAL_DATETIME" in line_upper
-                )
-
-                # Защита от AMOUNT=10 в GetNewSessionNumber:
-                # простой AMOUNT парсим только после Initializing payment complete.
-                if target_tx.cash_collection_completed or has_real_payment_fields:
+                if patterns.NAMED_FIELDS_RE.search(line):
                     payment_fields = patterns.parse_payment_fields(line)
-                else:
-                    payment_fields = {}
 
                 if payment_fields:
                     target_tx.named_fields.update(payment_fields)
 
-                    amount_all = (
-                        payment_fields.get("AMOUNTALL_TJS")
-                        or payment_fields.get("AMOUNTALL")
-                    )
+                    amount_all = payment_fields.get("AMOUNTALL")
                     amount = payment_fields.get("AMOUNT")
                     comission = payment_fields.get("COMISSION")
                     local_datetime = payment_fields.get("LOCAL_DATETIME")
@@ -147,10 +133,8 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                 if current_tx:
                     current_tx.completed = True
                     transactions.append(current_tx)
-                    last_tx = current_tx
                     current_tx = None
 
-        # Finalize any open transaction at end of session
         if current_tx:
             transactions.append(current_tx)
 

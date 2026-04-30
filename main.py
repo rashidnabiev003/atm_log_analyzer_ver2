@@ -5,7 +5,7 @@ from pathlib import Path
 
 from configs.query import ClientQuery
 from decimal import Decimal
-from parser.reader import read_file
+from parser.reader import read_log_records
 from parser.extractor import extract_transactions
 from report.investigator import investigate
 from report.reporter import print_investigation_report
@@ -73,7 +73,7 @@ def main() -> None:
         claimed_amount=args.claimed_amount,
     )
 
-    transactions = extract_transactions(read_file(log_sources["kiosk_log"]))
+    transactions = extract_transactions(read_log_records(log_sources["kiosk_log"]))
 
     result = investigate(transactions, query)
     result["log_sources"] = log_sources
