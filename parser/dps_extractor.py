@@ -28,6 +28,7 @@ def detect_errors_in_line(line: str, line_no: int) -> list[DetectedError]:
 def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
     transactions: List[Transaction] = []
     global_pending_errors: list[DetectedError] = []
+    last_closed_tx: Optional[Transaction] = None
 
     for session_lines in split_sessions(lines):
         session_id: Optional[str] = None
@@ -62,6 +63,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
             if patterns.PAYMENT_START_RE.search(line):
                 if current_tx:
                     transactions.append(current_tx)
+                    last_closed_tx = current_tx
 
                 current_tx = Transaction(
                     session_id=session_id,
@@ -87,7 +89,10 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
             target_tx = current_tx
 
             if line_errors and not target_tx:
-                pending_errors.extend(line_errors)
+                if last_closed_tx is not None:
+                    last_closed_tx.errors.extend(line_errors)
+                else:
+                    pending_errors.extend(line_errors)
 
             if patterns.INIT_PAYMENT_COMPLETE_RE.search(line):
                 if current_tx:
@@ -149,13 +154,18 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     current_tx.completed = True
                     current_tx.completed_at = line_timestamp
                     transactions.append(current_tx)
+                    last_closed_tx = current_tx
                     current_tx = None
                     inside_cheque_fields = False
 
         if current_tx:
             transactions.append(current_tx)
-    
-    if pending_errors:
-        global_pending_errors.extend(pending_errors)
+            last_closed_tx = current_tx
+
+        if pending_errors:
+            if last_closed_tx is not None:
+                last_closed_tx.errors.extend(pending_errors)
+            else:
+                global_pending_errors.extend(pending_errors)
     
     return transactions
