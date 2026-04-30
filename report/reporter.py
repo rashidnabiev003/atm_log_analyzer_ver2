@@ -28,6 +28,28 @@ def format_payment_errors(errors: list) -> str:
     return "\n".join(parts)
 
 
+def format_validator_errors(errors: list) -> str:
+    if not errors:
+        return "нет"
+
+    parts = []
+
+    for err in errors:
+        parts.append(
+            "\n".join(
+                [
+                    f"- [{err.severity}] {err.code}: {err.title}",
+                    f"  Категория: {err.category}",
+                    f"  Время: {err.timestamp if err.timestamp is not None else 'N/A'}",
+                    f"  Вывод: {err.conclusion}",
+                    f"  Фрагмент: {err.raw[:500]}",
+                ]
+            )
+        )
+
+    return "\n".join(parts)
+
+
 def format_validator_cycles(cycles: list) -> str:
     if not cycles:
         return "нет"
@@ -35,8 +57,6 @@ def format_validator_cycles(cycles: list) -> str:
     parts = []
 
     for idx, cycle in enumerate(cycles, start=1):
-        states = [event.state for event in cycle.states]
-
         parts.append(
             "\n".join(
                 [
@@ -44,8 +64,8 @@ def format_validator_cycles(cycles: list) -> str:
                     f"  Начало: {cycle.started_at if cycle.started_at is not None else 'N/A'}",
                     f"  Конец: {cycle.finished_at if cycle.finished_at is not None else 'N/A'}",
                     f"  Завершён корректно: {'да' if cycle.is_complete else 'нет'}",
-                    f"  Состояния: {states}",
-                    f"  Строки: {cycle.line_start}–{cycle.line_end}",
+                    f"  Ошибки Validator:",
+                    format_validator_errors(getattr(cycle, "errors", [])),
                 ]
             )
         )
@@ -98,8 +118,23 @@ def format_investigation_report(result: dict) -> str:
         payment_errors = item.get("payment_errors", [])
         validator_cycles = item.get("validator_cycles", [])
 
+        validator_errors = []
+        for cycle in validator_cycles:
+            validator_errors.extend(getattr(cycle, "errors", []))
+
+        has_errors = bool(tx.errors or payment_errors or validator_errors)
+
         parts.append(f"--- Транзакция {idx} ---")
         parts.append(tx.report())
+
+        parts.append("")
+        parts.append("Итог по всем логам:")
+        if tx.completed and not has_errors:
+            parts.append("Операция завершена успешно.")
+        elif tx.completed:
+            parts.append("Операция завершена в DPS, но в связанных логах обнаружены ошибки/предупреждения.")
+        else:
+            parts.append("Операция не завершена в DPS.")
 
         parts.append("")
         parts.append("Ошибки PaymentsThread:")

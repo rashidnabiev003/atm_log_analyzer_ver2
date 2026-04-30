@@ -99,4 +99,77 @@ ERROR_RULES = [
             "или перейти в проблемное состояние."
         ),
     ),
+    ErrorRule(
+    code="TERMINAL_STARTUP_DETECTED",
+    title="Обнаружен запуск/перезапуск терминала",
+    category="terminal_power",
+    severity="medium",
+    pattern=re.compile(
+        r"\bVersion\s*=\s*\d+(?:\.\d+){2,4}"
+        r"|Defines\s*=\s*.*\bKIOS_APP\b",
+        re.IGNORECASE,
+    ),
+    conclusion=(
+        "В DPS обнаружен блок запуска/перезапуска терминала. "
+        "Если это произошло между действиями клиента, операция могла быть прервана."
+        ),
+    ),
+    ErrorRule(
+        code="STACKER_LENGTH_ERROR",
+        title="Ошибка прохождения купюры / возможное замятие",
+        category="cash_acceptor",
+        severity="critical",
+        pattern=re.compile(
+            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.]?\s*Lenght_error"
+            r"|Lenght_error",
+            re.IGNORECASE,
+        ),
+        conclusion=(
+            "Обнаружена ошибка Lenght_error. Вероятно, купюра застряла "
+            "или некорректно прошла внутри купюроприёмника."
+        ),
+    ),
+    ErrorRule(
+        code="STACKER_IDENTIFICATION_ERROR",
+        title="Ошибка идентификации купюры",
+        category="cash_acceptor",
+        severity="high",
+        pattern=re.compile(
+            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.]?\s*Identification_error"
+            r"|Identification_error",
+            re.IGNORECASE,
+        ),
+        conclusion=(
+            "Купюроприёмник не смог идентифицировать купюру. "
+            "Возможна проблема распознавания или прохождения купюры."
+        ),
+    ),
+    ErrorRule(
+        code="STACKER_VERIFICATION_ERROR",
+        title="Ошибка проверки купюры",
+        category="cash_acceptor",
+        severity="high",
+        pattern=re.compile(
+            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.]?\s*Verification_error"
+            r"|Verification_error",
+            re.IGNORECASE,
+        ),
+        conclusion=(
+            "Купюра не прошла проверку. Возможна проблема валидации или сбой купюроприёмника."
+        ),
+    ),
+    ErrorRule(
+        code="STACKER_INSERTION_ERROR",
+        title="Ошибка вставки / подачи купюры",
+        category="cash_acceptor",
+        severity="high",
+        pattern=re.compile(
+            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.]?\s*Insertion_error"
+            r"|Insertion_error",
+            re.IGNORECASE,
+        ),
+        conclusion=(
+            "Обнаружена ошибка подачи купюры. Купюра могла быть некорректно принята механизмом."
+        ),
+    ),
 ]

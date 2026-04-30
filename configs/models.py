@@ -74,8 +74,6 @@ class Transaction:
             else:
                 reasons.append("Транзакция не завершена")
 
-        # Главная проверка по NamedFields:
-        # AMOUNTALL - COMISSION == AMOUNT
         if self.expected_amount is not None and self.credited_amount is not None:
             if self.comission_amount is not None:
                 expected_credited = float(self.expected_amount) - float(self.comission_amount)

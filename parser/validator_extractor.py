@@ -6,6 +6,7 @@ from typing import Iterable
 from configs import patterns
 from parser.reader import read_log_records
 from parser.time_utils import parse_log_timestamp
+from configs.validator_error_rules import ERROR_RULES, ValidatorLogError
 
 
 @dataclass
@@ -15,7 +16,6 @@ class ValidatorStateEvent:
     raw: str
     timestamp: datetime | None = None
 
-
 @dataclass
 class ValidatorBillCycle:
     started_at: datetime | None
@@ -23,7 +23,7 @@ class ValidatorBillCycle:
     line_start: int | None = None
     line_end: int | None = None
     states: list[ValidatorStateEvent] = field(default_factory=list)
-    raw_errors: list[str] = field(default_factory=list)
+    errors: list[ValidatorLogError] = field(default_factory=list)
 
     @property
     def is_complete(self) -> bool:
@@ -31,15 +31,39 @@ class ValidatorBillCycle:
         found = {event.state for event in self.states}
         return required.issubset(found)
 
+def detect_validator_errors(record: str, line_no: int) -> list[ValidatorLogError]:
+    timestamp = parse_log_timestamp(record)
+    result: list[ValidatorLogError] = []
+
+    for rule in ERROR_RULES:
+        if rule.pattern.search(record):
+            result.append(
+                ValidatorLogError(
+                    code=rule.code,
+                    title=rule.title,
+                    category=rule.category,
+                    severity=rule.severity,
+                    line_no=line_no,
+                    raw=record,
+                    conclusion=rule.conclusion,
+                    timestamp=timestamp,
+                )
+            )
+
+    return result
+
 def extract_validator_cycles_from_records(records: Iterable[str]) -> list[ValidatorBillCycle]:
     cycles: list[ValidatorBillCycle] = []
     current_cycle: ValidatorBillCycle | None = None
 
     for line_no, record in enumerate(records, start=1):
         timestamp = parse_log_timestamp(record)
+        record_errors = detect_validator_errors(record, line_no)
 
         if patterns.VALIDATOR_ENABLE_BILL_RE.search(record):
             if current_cycle is not None:
+                if record_errors:
+                    current_cycle.errors.extend(record_errors)
                 cycles.append(current_cycle)
 
             current_cycle = ValidatorBillCycle(

@@ -27,6 +27,7 @@ def detect_errors_in_line(line: str, line_no: int) -> list[DetectedError]:
 
 def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
     transactions: List[Transaction] = []
+    global_pending_errors: list[DetectedError] = []
 
     for session_lines in split_sessions(lines):
         session_id: Optional[str] = None
@@ -71,6 +72,10 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
                 inside_cheque_fields = False
                 started_new_tx = True
+
+                if global_pending_errors:
+                    current_tx.errors.extend(global_pending_errors)
+                    global_pending_errors = []
 
                 if pending_errors:
                     current_tx.errors.extend(pending_errors)
@@ -149,5 +154,8 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
         if current_tx:
             transactions.append(current_tx)
-
+    
+    if pending_errors:
+        global_pending_errors.extend(pending_errors)
+    
     return transactions
