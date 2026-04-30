@@ -52,11 +52,12 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         # State variables for transactions within this session
         current_tx: Optional[Transaction] = None
         pending_errors: list[DetectedError] = []
-
+        inside_cheque_fields = False
 
         for line_no, line in enumerate(session_lines, start=1):
             line_timestamp = parse_log_timestamp(line)
             line_errors = detect_errors_in_line(line, line_no)
+            started_new_tx = False
 
             if patterns.PAYMENT_START_RE.search(line):
                 if current_tx:
@@ -69,14 +70,15 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     started_at=line_timestamp,
                 )
 
+                inside_cheque_fields = False
+                started_new_tx = True
+
                 if pending_errors:
                     current_tx.errors.extend(pending_errors)
                     pending_errors = []
 
                 if line_errors:
                     current_tx.errors.extend(line_errors)
-
-                continue
 
             target_tx = current_tx
 
@@ -88,7 +90,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     current_tx.cash_collection_completed = True
 
             if target_tx:
-                if line_errors:
+                if line_errors and not started_new_tx:
                     target_tx.errors.extend(line_errors)
 
                 for bill_match in patterns.BILL_RE.finditer(line):
@@ -101,12 +103,19 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                         target_tx.bill_row_keys.add(row_key)
                         target_tx.bills.append(Bill(denomination=denom, count=count))
 
-                payment_fields: dict[str, str] = {}
+                payment_fields = patterns.parse_payment_fields(line)
 
-                if patterns.CHEQUE_FIELDS_BLOCK_RE.search(line):
-                    payment_fields = patterns.parse_payment_fields(line)
+                starts_cheque_fields = (
+                    patterns.CHEQUE_FIELDS_BLOCK_RE.search(line) is not None
+                    or "AMOUNTALL" in payment_fields
+                    or "COMISSION" in payment_fields
+                    or "LOCAL_DATETIME" in payment_fields
+                )
 
-                if payment_fields:
+                if starts_cheque_fields:
+                    inside_cheque_fields = True
+
+                if inside_cheque_fields and payment_fields:
                     target_tx.named_fields.update(payment_fields)
 
                     amount_all = payment_fields.get("AMOUNTALL")
@@ -136,6 +145,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     current_tx.completed_at = line_timestamp
                     transactions.append(current_tx)
                     current_tx = None
+                    inside_cheque_fields = False
 
         if current_tx:
             transactions.append(current_tx)
