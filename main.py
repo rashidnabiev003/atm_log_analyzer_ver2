@@ -7,6 +7,7 @@ from configs.query import ClientQuery
 from decimal import Decimal
 from parser.reader import read_log_records
 from parser.dps_extractor import extract_transactions
+from parser.validator_extractor import extract_validator_cycles
 from report.investigator import investigate
 from report.reporter import print_investigation_report
 
@@ -74,6 +75,20 @@ def main() -> None:
     )
 
     transactions = extract_transactions(read_log_records(log_sources["kiosk_log"]))
+
+    validator_cycles = []
+
+    if log_sources["validator_log"]:
+        validator_cycles = extract_validator_cycles(log_sources["validator_log"])
+
+    print(f"DEBUG validator cycles: {len(validator_cycles)}")
+    for i, cycle in enumerate(validator_cycles[:10], start=1):
+        print(
+            f"DEBUG VALIDATOR {i}: "
+            f"start={cycle.started_at}, finish={cycle.finished_at}, "
+            f"complete={cycle.is_complete}, "
+            f"states={[event.state for event in cycle.states]}"
+        )
 
     result = investigate(transactions, query)
     result["log_sources"] = log_sources

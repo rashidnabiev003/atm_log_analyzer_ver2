@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import List, Optional
 
 
@@ -42,6 +43,8 @@ class Transaction:
     local_datetime: Optional[str] = None
     named_fields: dict[str, str] = field(default_factory=dict)
 
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
 
 
     @property

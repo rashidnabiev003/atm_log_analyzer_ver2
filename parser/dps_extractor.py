@@ -1,10 +1,9 @@
-from datetime import datetime
 from typing import Iterable, List, Optional
-
 from configs import patterns
 from configs.models import Transaction, Bill, DetectedError
 from configs.dps_error_rules import ERROR_RULES
 from session.sessionizer import split_sessions
+from parser.time_utils import parse_log_timestamp
 
 def detect_errors_in_line(line: str, line_no: int) -> list[DetectedError]:
     result = []
@@ -30,12 +29,9 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
     transactions: List[Transaction] = []
 
     for session_lines in split_sessions(lines):
-        # Extract session‑wide fields
         session_id: Optional[str] = None
         phone: Optional[str] = None
         account: Optional[str] = None
-        started_at: datetime | None = None
-        completed_at: datetime | None = None
 
         for line in session_lines:
             if not session_id:
@@ -59,6 +55,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
 
         for line_no, line in enumerate(session_lines, start=1):
+            line_timestamp = parse_log_timestamp(line)
             line_errors = detect_errors_in_line(line, line_no)
 
             if patterns.PAYMENT_START_RE.search(line):
@@ -69,6 +66,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     session_id=session_id,
                     phone=phone,
                     account=account,
+                    started_at=line_timestamp,
                 )
 
                 if pending_errors:
@@ -136,6 +134,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                 if current_tx:
                     current_tx.completed = True
                     transactions.append(current_tx)
+                    current_tx.completed_at = line_timestamp
                     current_tx = None
 
         if current_tx:

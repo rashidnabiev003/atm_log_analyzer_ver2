@@ -5,6 +5,7 @@ from typing import Iterable
 
 from configs import patterns
 from parser.reader import read_log_records
+from parser.time_utils import parse_log_timestamp
 
 
 @dataclass
@@ -30,29 +31,12 @@ class ValidatorBillCycle:
         found = {event.state for event in self.states}
         return required.issubset(found)
 
-
-def parse_dps_timestamp(text: str) -> datetime | None:
-    match = patterns.LOG_TIMESTAMP_RE.search(text)
-    if not match:
-        return None
-
-    raw = match.group("ts")
-
-    for fmt in ("%d.%m.%Y %H.%M.%S.%f", "%d/%m/%Y %H.%M.%S.%f"):
-        try:
-            return datetime.strptime(raw, fmt)
-        except ValueError:
-            pass
-
-    return None
-
-
 def extract_validator_cycles_from_records(records: Iterable[str]) -> list[ValidatorBillCycle]:
     cycles: list[ValidatorBillCycle] = []
     current_cycle: ValidatorBillCycle | None = None
 
     for line_no, record in enumerate(records, start=1):
-        timestamp = parse_dps_timestamp(record)
+        timestamp = parse_log_timestamp(record)
 
         if patterns.VALIDATOR_ENABLE_BILL_RE.search(record):
             if current_cycle is not None:
