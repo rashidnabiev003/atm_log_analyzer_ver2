@@ -5,11 +5,11 @@ from pathlib import Path
 
 
 LOG_RECORD_START_RE = re.compile(
-    r"^\s*\d{2}[./]\d{2}[./]\d{4}\s+\d{2}[.:]\d{2}[.:]\d{2}[.:]\d{3,6}\b"
+    r"^\s*\d{2}[./]\d{2}[./]\d{4}\s+\d{2}[.:]\d{2}[.:]\d{2}[.:]\d{3}\b"
 )
 
 LOG_RECORD_SPLIT_RE = re.compile(
-    r"(?=\d{2}[./]\d{2}[./]\d{4}\s+\d{2}[.:]\d{2}[.:]\d{2}[.:]\d{3,6}\b)"
+    r"(?=\d{2}[./]\d{2}[./]\d{4}\s+\d{2}[.:]\d{2}[.:]\d{2}[.:]\d{3}\b)"
 )
 
 
