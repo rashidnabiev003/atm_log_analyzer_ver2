@@ -115,6 +115,21 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                 if starts_cheque_fields:
                     inside_cheque_fields = True
 
+                
+                if (
+                    patterns.CHEQUE_FIELDS_BLOCK_RE.search(line)
+                    or payment_fields
+                    or "AMOUNT" in line.upper()
+                    or "COMISSION" in line.upper()
+                    or "FIELDS FOR CHEQUE" in line.upper()
+                    or "MAKETEXTFORPRINT" in line.upper()
+                ):
+                    print("DEBUG CHEQUE RAW:", line[:700])
+                    print("DEBUG CHEQUE ANCHOR:", bool(patterns.CHEQUE_FIELDS_BLOCK_RE.search(line)))
+                    print("DEBUG INSIDE_CHEQUE:", inside_cheque_fields)
+                    print("DEBUG PAYMENT_FIELDS:", payment_fields)
+                    print("DEBUG HAS_TX:", target_tx is not None)
+
                 if inside_cheque_fields and payment_fields:
                     target_tx.named_fields.update(payment_fields)
 
