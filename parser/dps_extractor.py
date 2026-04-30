@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Iterable, List, Optional
 
 from configs import patterns
@@ -33,6 +34,9 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
         session_id: Optional[str] = None
         phone: Optional[str] = None
         account: Optional[str] = None
+        started_at: datetime | None = None
+        completed_at: datetime | None = None
+
         for line in session_lines:
             if not session_id:
                 m = patterns.SESSION_RE.search(line)
@@ -51,7 +55,6 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
         # State variables for transactions within this session
         current_tx: Optional[Transaction] = None
-        last_tx: Optional[Transaction] = None
         pending_errors: list[DetectedError] = []
 
 
@@ -102,7 +105,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
                 payment_fields: dict[str, str] = {}
 
-                if patterns.NAMED_FIELDS_RE.search(line):
+                if patterns.CHEQUE_FIELDS_BLOCK_RE.search(line):
                     payment_fields = patterns.parse_payment_fields(line)
 
                 if payment_fields:

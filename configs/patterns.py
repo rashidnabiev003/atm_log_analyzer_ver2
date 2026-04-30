@@ -1,6 +1,8 @@
 import re
 from typing import List, Dict, Pattern
 
+### DPS PATTERNS
+
 SESSION_RE = re.compile(r'\bSESSION\s*=\s*([^,\s]+)', re.IGNORECASE)
 PHONE_RE = re.compile(r'\bNUMBER\s*=\s*(\+?\d{9,15})', re.IGNORECASE)
 ACCOUNT_RE = re.compile(r'\bACCOUNT\s*=\s*([^,\s]+)', re.IGNORECASE)
@@ -16,8 +18,12 @@ PAYMENT_START_RE = re.compile(r"New\s+payment\s+started", re.IGNORECASE)
 
 INIT_PAYMENT_COMPLETE_RE = re.compile(r"Initializing\s+payment\s+complete", re.IGNORECASE)
 
-NAMED_FIELDS_RE = re.compile(
-    r"\bNamed\s*Fields\s*:",
+CHEQUE_FIELDS_BLOCK_RE = re.compile(
+    r"Named\s*Fields\s*:"
+    r"|Fields\s+for\s+Cheque\s*:"
+    r"|TForm1\s*:\s*MakeTextForPrint"
+    r"|AMOUNTALL(?:_TJS)?\s*[:=]"
+    r"|COMISSION\s*[:=]",
     re.IGNORECASE,
 )
 
@@ -42,7 +48,7 @@ AMOUNT_RE = re.compile(
 )
 
 COMISSION_RE = re.compile(
-    rf"\bCOMISSION\b\s*[:=]\s*{MONEY_VALUE_PATTERN}",
+    rf"\bCOMISSION(?:_TJS)?\b\s*[:=]\s*{MONEY_VALUE_PATTERN}",
     re.IGNORECASE,
 )
 
@@ -54,6 +60,30 @@ LOCAL_DATIME_RE = re.compile(
     r")",
     re.IGNORECASE,
 )
+
+#### VALIDATOR PATTERNS
+
+VALIDATOR_ENABLE_BILL_RE = re.compile(
+    r"\bENABLE\s+BILL\b",
+    re.IGNORECASE,
+)
+
+VALIDATOR_DISABLE_BILL_RE = re.compile(
+    r"\bDISABLE\s+BILL\b",
+    re.IGNORECASE,
+)
+
+VALIDATOR_STATE_RE = re.compile(
+    r"State\s*\[\s*(?P<state>\d+)\s*\]",
+    re.IGNORECASE,
+)
+
+LOG_TIMESTAMP_RE = re.compile(
+    r"(?P<ts>\d{2}[./]\d{2}[./]\d{4}\s+\d{2}[.:]\d{2}[.:]\d{2}[.:]\d{3})"
+)
+
+
+### PAYMENT PATTERNS
 
 def parse_money(value: str | None) -> float | None:
     if value is None:

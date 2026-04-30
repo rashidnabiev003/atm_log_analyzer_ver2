@@ -6,7 +6,7 @@ from pathlib import Path
 from configs.query import ClientQuery
 from decimal import Decimal
 from parser.reader import read_log_records
-from parser.extractor import extract_transactions
+from parser.dps_extractor import extract_transactions
 from report.investigator import investigate
 from report.reporter import print_investigation_report
 
