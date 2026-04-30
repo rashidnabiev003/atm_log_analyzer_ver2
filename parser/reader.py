@@ -5,7 +5,11 @@ import re
 
 
 LOG_RECORD_START_RE = re.compile(
-    r"^\s*\d{2}\.\d{2}\.\d{4}\s+\d{2}\.\d{2}\.\d{2}\.\d{3}\b"
+    r"^\s*\d{2}[./]\d{2}[./]\d{4}\s+\d{2}[.:]\d{2}[.:]\d{2}[.:]\d{3,6}\b"
+)
+
+LOG_RECORD_SPLIT_RE = re.compile(
+    r"(?=\d{2}[./]\d{2}[./]\d{4}\s+\d{2}[.:]\d{2}[.:]\d{2}[.:]\d{3,6}\b)"
 )
 
 
@@ -20,20 +24,43 @@ def read_file(path: str | Path, *, encoding: str = "utf-8") -> Iterator[str]:
             yield line.rstrip("\n")
 
 
+def split_physical_line(line: str) -> list[str]:
+    """
+    Если в одной физической строке склеено несколько timestamp-log records,
+    режем их обратно.
+
+    Пример:
+    20.04.2026 14.30.00.123 ... 20.04.2026 14.31.00.555 ...
+
+    станет двумя record.
+    """
+    parts = [part.strip() for part in LOG_RECORD_SPLIT_RE.split(line) if part.strip()]
+    return parts or [line]
+
+
 def read_log_records(path: str | Path, *, encoding: str = "utf-8") -> Iterator[str]:
+    """
+    Читает файл как timestamp-records.
+
+    Важно:
+    - timestamp может быть в начале физической строки;
+    - timestamp может быть внутри длинной физической строки;
+    - строки без timestamp приклеиваются к предыдущему record.
+    """
     current_record: list[str] = []
 
     with io.open(path, "r", encoding=encoding, errors="ignore") as f:
         for raw_line in f:
-            line = raw_line.rstrip("\n")
+            physical_line = raw_line.rstrip("\n\r")
 
-            is_new_record = LOG_RECORD_START_RE.search(line) is not None
+            for line in split_physical_line(physical_line):
+                is_new_record = LOG_RECORD_START_RE.search(line) is not None
 
-            if is_new_record and current_record:
-                yield "\n".join(current_record)
-                current_record = [line]
-            else:
-                current_record.append(line)
+                if is_new_record and current_record:
+                    yield "\n".join(current_record)
+                    current_record = [line]
+                else:
+                    current_record.append(line)
 
     if current_record:
         yield "\n".join(current_record)
