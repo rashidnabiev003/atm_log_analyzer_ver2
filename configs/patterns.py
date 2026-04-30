@@ -27,10 +27,16 @@ CHEQUE_FIELDS_BLOCK_RE = re.compile(
     re.IGNORECASE,
 )
 
-PAYMENT_COMPLETE_RE = re.compile(
+PAYMENT_COMPLETE_RE___ = re.compile(
     r"PaymentComplete\s*\.?\s*html"
     r"|PaymentComplete\.html"
     r"|Payment\s*finished\.?"
+    r"|PaymentFinished\.?",
+    re.IGNORECASE,
+)
+
+PAYMENT_COMPLETE_RE = re.compile(
+    r"Payment\s*finished\.?"
     r"|PaymentFinished\.?",
     re.IGNORECASE,
 )
