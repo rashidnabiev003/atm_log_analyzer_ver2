@@ -10,7 +10,7 @@ from parser.dps_extractor import extract_transactions
 from parser.validator_extractor import extract_validator_cycles
 from report.investigator import investigate
 from report.reporter import print_investigation_report
-
+from parser.payments_extractor import extract_payment_errors, group_payment_errors_by_session
 
 KIOSK_LOG_PATH = Path("log.txt")
 PAYMENTS_THREAD_LOG_PATH = Path("PaymentsThread.log")
@@ -89,6 +89,25 @@ def main() -> None:
             f"complete={cycle.is_complete}, "
             f"states={[event.state for event in cycle.states]}"
         )
+
+    payment_errors = []
+
+    if log_sources["payments_log"]:
+        payment_errors = extract_payment_errors(log_sources["payments_log"])
+
+    payment_errors_by_session = group_payment_errors_by_session(payment_errors)
+
+    print(f"DEBUG payment errors: {len(payment_errors)}")
+    for i, error in enumerate(payment_errors[:10], start=1):
+        print(
+            f"DEBUG PAYMENT ERROR {i}: "
+            f"session={error.session_id}, "
+            f"time={error.timestamp}, "
+            f"code={error.code}, "
+            f"severity={error.severity}, "
+            f"line={error.line_no}"
+        )
+    print(f"  raw={error.raw[:300]}")
 
     result = investigate(transactions, query)
     result["log_sources"] = log_sources

@@ -133,8 +133,8 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
             if patterns.PAYMENT_COMPLETE_RE.search(line):
                 if current_tx:
                     current_tx.completed = True
-                    transactions.append(current_tx)
                     current_tx.completed_at = line_timestamp
+                    transactions.append(current_tx)
                     current_tx = None
 
         if current_tx:
