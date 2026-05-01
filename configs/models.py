@@ -116,7 +116,6 @@ class Transaction:
                     "полную проверку AMOUNTALL - COMISSION = AMOUNT выполнить нельзя"
                 )
 
-        # Купюры проверяем только если они реально найдены.
         if self.total_inserted > 0 and self.expected_amount is not None:
             if round(float(self.total_inserted), 2) != round(float(self.expected_amount), 2):
                 reasons.append(

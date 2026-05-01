@@ -2,7 +2,6 @@ from dataclasses import dataclass
 import re
 from typing import Pattern
 
-
 @dataclass(frozen=True)
 class ErrorRule:
     code: str

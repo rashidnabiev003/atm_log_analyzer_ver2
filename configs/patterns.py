@@ -1,11 +1,14 @@
 import re
-from typing import List, Dict, Pattern
 
 ### DPS PATTERNS
-
 SESSION_RE = re.compile(r'\bSESSION\s*=\s*([^,\s]+)', re.IGNORECASE)
 PHONE_RE = re.compile(r'\bNUMBER\s*=\s*(\+?\d{9,15})', re.IGNORECASE)
 ACCOUNT_RE = re.compile(r'\bACCOUNT\s*=\s*([^,\s]+)', re.IGNORECASE)
+
+DPS_BILL_INPUT = (
+    r"",
+    re.IGNORECASE
+)
 
 BILL_RE = re.compile(
     r"(?m)^\s*(?P<denom>\d{1,6})\s+TJS\s+(?P<count>\d{1,6})\s*$",
