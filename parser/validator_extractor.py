@@ -55,10 +55,28 @@ class ValidatorBillCycle:
         return sum(bill.nominal for bill in self.stacked_bills)
 
     @property
-    def last_max_cash(self) -> float | None:
+    def initial_max_cash(self) -> float | None:
         if not self.max_cash_values:
             return None
-        return self.max_cash_values[-1]
+        return self.max_cash_values[0]
+
+
+    @property
+    def remaining_max_cash(self) -> float | None:
+        if not self.max_cash_values:
+            return None
+        return min(self.max_cash_values)
+
+
+    @property
+    def total_by_max_cash_delta(self) -> float | None:
+        initial = self.initial_max_cash
+        remaining = self.remaining_max_cash
+
+        if initial is None or remaining is None:
+            return None
+
+        return initial - remaining
 
 
 def detect_validator_errors(record: str, line_no: int) -> list[ValidatorLogError]:

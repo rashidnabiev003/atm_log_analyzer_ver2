@@ -3,6 +3,37 @@ from configs.query import ClientQuery
 from configs.models import Transaction
 from collections import Counter
 
+def classify_operation(tx, payment_errors: list, validator_cycles: list) -> str:
+    validator_errors = []
+    validator_incomplete = False
+
+    for cycle in validator_cycles:
+        validator_errors.extend(getattr(cycle, "errors", []))
+        if not getattr(cycle, "is_complete", False):
+            validator_incomplete = True
+
+    has_critical_or_high = any(
+        getattr(err, "severity", "") in {"critical", "high"}
+        for err in [*tx.errors, *payment_errors, *validator_errors]
+    )
+
+    has_any_warning = bool(tx.errors or payment_errors or validator_errors)
+
+    if hasattr(tx, "has_financial_activity") and not tx.has_financial_activity():
+        return "NO_OPERATION"
+
+    if not tx.completed or validator_incomplete:
+        return "INCOMPLETE"
+
+    if has_critical_or_high:
+        return "FAILED"
+
+    if has_any_warning:
+        return "SUSPICIOUS"
+
+    return "SUCCESS"
+
+
 def format_unique_errors(errors: list) -> str:
     if not errors:
         return "нет"
@@ -73,7 +104,9 @@ def format_validator_cycles(cycles: list) -> str:
         total_stacked = getattr(cycle, "total_stacked", 0.0)
         total_validator_stacked += total_stacked
 
-        last_max_cash = getattr(cycle, "last_max_cash", None)
+        initial_max_cash = getattr(cycle, "initial_max_cash", None)
+        remaining_max_cash = getattr(cycle, "remaining_max_cash", None)
+        max_cash_delta = getattr(cycle, "total_by_max_cash_delta", None)
 
         parts.append(
             "\n".join(
@@ -83,7 +116,9 @@ def format_validator_cycles(cycles: list) -> str:
                     f"  Конец: {cycle.finished_at if cycle.finished_at is not None else 'N/A'}",
                     f"  Завершён корректно: {'да' if cycle.is_complete else 'нет'}",
                     f"  Принято по Validator: {total_stacked:g} TJS",
-                    f"  Последний MaxCash: {last_max_cash if last_max_cash is not None else 'N/A'}",
+                    f"  MaxCash начальный: {initial_max_cash if initial_max_cash is not None else 'N/A'}",
+                    f"  MaxCash остаток: {remaining_max_cash if remaining_max_cash is not None else 'N/A'}",
+                    f"  По разнице MaxCash: {max_cash_delta if max_cash_delta is not None else 'N/A'} TJS",
                 ]
             )
         )
@@ -153,13 +188,20 @@ def format_investigation_report(result: dict) -> str:
         parts.append(tx.report())
 
         parts.append("")
-        parts.append("Итог по всем логам:")
-        if tx.completed and not has_errors:
-            parts.append("Операция завершена успешно.")
-        elif tx.completed:
-            parts.append("Операция завершена в DPS, но в связанных логах обнаружены ошибки/предупреждения.")
-        else:
-            parts.append("Операция не завершена в DPS.")
+        operation_status = classify_operation(tx, payment_errors, validator_cycles)
+        parts.append("")
+        parts.append(f"Итоговая оценка: {operation_status}")
+
+        if operation_status == "SUCCESS":
+            parts.append("Операция успешна.")
+        elif operation_status == "FAILED":
+            parts.append("Операция неуспешна: обнаружены критичные ошибки.")
+        elif operation_status == "SUSPICIOUS":
+            parts.append("Операция подозрительна: есть предупреждения или расхождения.")
+        elif operation_status == "INCOMPLETE":
+            parts.append("Операция не завершена полностью.")
+        elif operation_status == "NO_OPERATION":
+            parts.append("Финансовая операция не выполнялась.")
 
         parts.append("")
         parts.append("Ошибки PaymentsThread:")

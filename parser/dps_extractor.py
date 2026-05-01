@@ -102,11 +102,35 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                 if line_errors and not started_new_tx:
                     target_tx.errors.extend(line_errors)
 
+                for stacked_match in patterns.DPS_STACKED_BILL_RE.finditer(line):
+                    value = patterns.parse_money(stacked_match.group("denom"))
+                    if value is not None:
+                        target_tx.dps_stacked_bill_values.append(value)
+
+                for note_match in patterns.DPS_NOTE_ADDED_RE.finditer(line):
+                    value = patterns.parse_money(note_match.group("denom"))
+                    if value is None:
+                        continue
+
+                    if target_tx.bill_table_seen:
+                        continue
+
+                    row_key = f"DPS_NOTE:{value}:{line_no}"
+
+                    if row_key not in target_tx.dps_note_bill_keys:
+                        target_tx.dps_note_bill_keys.add(row_key)
+                        target_tx.bills.append(Bill(denomination=int(value), count=1))
+
                 for bill_match in patterns.BILL_RE.finditer(line):
                     denom = int(bill_match.group("denom"))
                     count = int(bill_match.group("count"))
 
-                    row_key = f"{denom}:TJS:{count}"
+                    if not target_tx.bill_table_seen:
+                        target_tx.bills.clear()
+                        target_tx.bill_row_keys.clear()
+                        target_tx.bill_table_seen = True
+
+                    row_key = f"TABLE:{denom}:TJS:{count}"
 
                     if row_key not in target_tx.bill_row_keys:
                         target_tx.bill_row_keys.add(row_key)

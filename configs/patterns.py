@@ -5,9 +5,14 @@ SESSION_RE = re.compile(r'\bSESSION\s*=\s*([^,\s]+)', re.IGNORECASE)
 PHONE_RE = re.compile(r'\bNUMBER\s*=\s*(\+?\d{9,15})', re.IGNORECASE)
 ACCOUNT_RE = re.compile(r'\bACCOUNT\s*=\s*([^,\s]+)', re.IGNORECASE)
 
-DPS_BILL_INPUT = (
-    r"",
-    re.IGNORECASE
+DPS_STACKED_BILL_RE = re.compile(
+    r"\bStacked\s*:\s*(?P<denom>\d+(?:[.,]\d+)?)\s*TJS\s+Type\s+\d+",
+    re.IGNORECASE,
+)
+
+DPS_NOTE_ADDED_RE = re.compile(
+    r"\bNote\s+(?P<denom>\d+(?:[.,]\d+)?)\s*TJS\s+added\s+to\s+payment\b",
+    re.IGNORECASE,
 )
 
 BILL_RE = re.compile(

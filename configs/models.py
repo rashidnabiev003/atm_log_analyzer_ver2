@@ -46,6 +46,10 @@ class Transaction:
     started_at: datetime | None = None
     completed_at: datetime | None = None
 
+    bill_table_seen: bool = False
+    dps_note_bill_keys: set[str] = field(default_factory=set)
+    dps_stacked_bill_values: list[float] = field(default_factory=list)
+
 
     @property
     def total_inserted(self) -> int:
@@ -181,5 +185,4 @@ class Transaction:
             f"Статус: {self.status()}\n"
             f"Ошибки:\n{errors_text}\n"
             f"NamedFields:\n{named_fields_text}\n"
-            f"Вывод: {self.conclusion()}"
         )
