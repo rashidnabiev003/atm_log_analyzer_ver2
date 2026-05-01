@@ -6,32 +6,27 @@ from collections import Counter
 def summarize_validator_cycles(cycles: list) -> dict:
     total_stacked = sum(float(getattr(cycle, "total_stacked", 0.0)) for cycle in cycles)
 
-    max_cash_values: list[float] = []
     validator_errors = []
     incomplete_cycles = 0
+    max_cash_delta_total = 0.0
+    has_max_cash_delta = False
 
     for cycle in cycles:
-        max_cash_values.extend(getattr(cycle, "max_cash_values", []))
         validator_errors.extend(getattr(cycle, "errors", []))
 
         if not getattr(cycle, "is_complete", False):
             incomplete_cycles += 1
 
-    initial_max_cash = max(max_cash_values) if max_cash_values else None
-    remaining_max_cash = min(max_cash_values) if max_cash_values else None
-
-    if initial_max_cash is not None and remaining_max_cash is not None:
-        max_cash_delta = initial_max_cash - remaining_max_cash
-    else:
-        max_cash_delta = None
+        cycle_delta = getattr(cycle, "total_by_max_cash_delta", None)
+        if cycle_delta is not None:
+            max_cash_delta_total += float(cycle_delta)
+            has_max_cash_delta = True
 
     return {
         "cycles_count": len(cycles),
         "incomplete_cycles": incomplete_cycles,
         "total_stacked": total_stacked,
-        "initial_max_cash": initial_max_cash,
-        "remaining_max_cash": remaining_max_cash,
-        "max_cash_delta": max_cash_delta,
+        "max_cash_delta": max_cash_delta_total if has_max_cash_delta else None,
         "errors": validator_errors,
     }
 
@@ -130,8 +125,6 @@ def format_validator_cycles(cycles: list) -> str:
         f"Циклов Validator: {summary['cycles_count']}",
         f"Незавершённых циклов: {summary['incomplete_cycles']}",
         f"Принято по Stacked nominal: {summary['total_stacked']:g} TJS",
-        f"MaxCash начальный: {summary['initial_max_cash'] if summary['initial_max_cash'] is not None else 'N/A'}",
-        f"MaxCash остаток: {summary['remaining_max_cash'] if summary['remaining_max_cash'] is not None else 'N/A'}",
         f"По разнице MaxCash: {summary['max_cash_delta'] if summary['max_cash_delta'] is not None else 'N/A'} TJS",
     ]
 

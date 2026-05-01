@@ -35,19 +35,16 @@ class ValidatorBillCycle:
     stacked_bills: list[ValidatorStackedBill] = field(default_factory=list)
     max_cash_values: list[float] = field(default_factory=list)
     errors: list[ValidatorLogError] = field(default_factory=list)
+    closed_by: str | None = None
 
     @property
     def has_disable_bill(self) -> bool:
-        return self.finished_at is not None
+        return self.closed_by == "DISABLE_BILL"
 
     @property
     def is_complete(self) -> bool:
         required = {20, 21, 128, 23, 129}
         found = {event.state for event in self.states}
-
-        # ВАЖНО:
-        # одних state недостаточно.
-        # Если нет DISABLE BILL, операция незавершённая.
         return self.has_disable_bill and required.issubset(found)
 
     @property
@@ -58,25 +55,34 @@ class ValidatorBillCycle:
     def initial_max_cash(self) -> float | None:
         if not self.max_cash_values:
             return None
-        return max(self.max_cash_values)
+
+        return self.max_cash_values[0]
 
 
     @property
     def remaining_max_cash(self) -> float | None:
         if not self.max_cash_values:
             return None
-        return min(self.max_cash_values)
+
+        return self.max_cash_values[-1]
 
 
     @property
     def total_by_max_cash_delta(self) -> float | None:
-        initial = self.initial_max_cash
-        remaining = self.remaining_max_cash
-
-        if initial is None or remaining is None:
+        if len(self.max_cash_values) < 2:
             return None
 
-        return initial - remaining
+        delta = 0.0
+
+        previous = self.max_cash_values[0]
+
+        for current in self.max_cash_values[1:]:
+            if current < previous:
+                delta += previous - current
+
+            previous = current
+
+        return delta
 
 
 def detect_validator_errors(record: str, line_no: int) -> list[ValidatorLogError]:
@@ -112,13 +118,49 @@ def extract_validator_cycles_from_records(records: Iterable[str]) -> list[Valida
     cycles: list[ValidatorBillCycle] = []
     current_cycle: ValidatorBillCycle | None = None
 
+    def close_current_cycle(
+        *,
+        finished_at: datetime | None,
+        line_end: int,
+        closed_by: str,
+    ) -> None:
+        nonlocal current_cycle
+
+        if current_cycle is None:
+            return
+
+        current_cycle.finished_at = finished_at
+        current_cycle.line_end = line_end
+        current_cycle.closed_by = closed_by
+        cycles.append(current_cycle)
+        current_cycle = None
+
     for line_no, record in enumerate(records, start=1):
         timestamp = parse_log_timestamp(record)
         record_errors = detect_validator_errors(record, line_no)
 
-        if patterns.VALIDATOR_ENABLE_BILL_RE.search(record):
+        device_start = patterns.VALIDATOR_DEVICE_START_RE.search(record) is not None
+        enable_bill = patterns.VALIDATOR_ENABLE_BILL_RE.search(record) is not None
+        disable_bill = patterns.VALIDATOR_DISABLE_BILL_RE.search(record) is not None
+
+        # Если устройство стартануло, а DISABLE BILL не было —
+        # закрываем текущий цикл как незавершённый.
+        if device_start and current_cycle is not None:
+            close_current_cycle(
+                finished_at=timestamp,
+                line_end=line_no,
+                closed_by="DEVICE_START",
+            )
+
+        # Если начался новый ENABLE BILL, а старый цикл не закрыт —
+        # старый цикл закрываем как незавершённый.
+        if enable_bill:
             if current_cycle is not None:
-                cycles.append(current_cycle)
+                close_current_cycle(
+                    finished_at=timestamp,
+                    line_end=line_no,
+                    closed_by="NEXT_ENABLE_BILL",
+                )
 
             current_cycle = ValidatorBillCycle(
                 started_at=timestamp,
@@ -164,15 +206,19 @@ def extract_validator_cycles_from_records(records: Iterable[str]) -> list[Valida
                         )
                     )
 
-        if patterns.VALIDATOR_DISABLE_BILL_RE.search(record):
-            if current_cycle is not None:
-                current_cycle.finished_at = timestamp
-                current_cycle.line_end = line_no
-                cycles.append(current_cycle)
-                current_cycle = None
+        if disable_bill and current_cycle is not None:
+            close_current_cycle(
+                finished_at=timestamp,
+                line_end=line_no,
+                closed_by="DISABLE_BILL",
+            )
 
     if current_cycle is not None:
-        cycles.append(current_cycle)
+        close_current_cycle(
+            finished_at=current_cycle.finished_at,
+            line_end=current_cycle.line_end or 0,
+            closed_by="EOF",
+        )
 
     return cycles
 

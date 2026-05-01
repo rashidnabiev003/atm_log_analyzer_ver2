@@ -74,7 +74,10 @@ LOCAL_DATIME_RE = re.compile(
 )
 
 #### VALIDATOR PATTERNS
-
+VALIDATOR_DEVICE_START_RE = re.compile(
+    r"Старт\s+работы\s+устройства",
+    re.IGNORECASE,
+)
 
 VALIDATOR_ENABLE_BILL_RE = re.compile(
     r"\bENABLE\s+BILL\b"
