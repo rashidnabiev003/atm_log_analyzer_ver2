@@ -53,17 +53,41 @@ class Transaction:
         return sum(bill.total for bill in self.bills)
 
     def status(self) -> str:
-        """Return a simple status string based on completion and errors."""
+        if not self.has_financial_activity():
+            return "NO_OPERATION"
+
         if self.completed and not self.errors:
             return "SUCCESS"
+
         if self.errors:
             return "FAILED"
+
         return "INCOMPLETE"
+    
+    def has_financial_activity(self) -> bool:
+        return (
+            bool(self.bills)
+            or bool(self.named_fields)
+            or self.expected_amount is not None
+            or self.credited_amount is not None
+            or self.comission_amount is not None
+            or self.cash_collection_completed
+        )
 
     def conclusion(self) -> str:
         reasons: list[str] = []
 
+        if not self.has_financial_activity():
+            return "Сессия открыта/закрыта без финансовой операции"
+
+        seen_error_conclusions = set()
+        
         for err in self.errors:
+            key = (err.code, err.conclusion)
+            if key in seen_error_conclusions:
+                continue
+
+            seen_error_conclusions.add(key)
             reasons.append(f"{err.title}: {err.conclusion}")
 
         if not self.completed:
@@ -110,15 +134,32 @@ class Transaction:
         bill_list = [(b.denomination, b.count) for b in self.bills]
 
         if self.errors:
+            grouped = {}
+
+            for err in self.errors:
+                key = (
+                    err.code,
+                    err.title,
+                    err.category,
+                    err.severity,
+                    err.conclusion,
+                )
+
+                if key not in grouped:
+                    grouped[key] = {"error": err, "count": 0}
+
+                grouped[key]["count"] += 1
+
             errors_text = "\n".join(
                 (
-                    f"- [{err.severity}] {err.code}: {err.title}\n"
-                    f"  Категория: {err.category}\n"
-                    f"  Строка: {err.line_no}\n"
-                    f"  Вывод: {err.conclusion}\n"
-                    f"  Фрагмент: {err.raw}"
+                    f"- [{item['error'].severity}] {item['error'].code}: {item['error'].title}"
+                    f"{' x' + str(item['count']) if item['count'] > 1 else ''}\n"
+                    f"  Категория: {item['error'].category}\n"
+                    f"  Строка: {item['error'].line_no}\n"
+                    f"  Вывод: {item['error'].conclusion}\n"
+                    f"  Пример фрагмента: {item['error'].raw[:500]}"
                 )
-                for err in self.errors
+                for item in grouped.values()
             )
         else:
             errors_text = "нет"

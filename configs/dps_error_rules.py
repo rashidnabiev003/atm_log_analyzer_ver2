@@ -120,8 +120,8 @@ ERROR_RULES = [
         category="cash_acceptor",
         severity="critical",
         pattern=re.compile(
-            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.]?\s*Lenght_error"
-            r"|Lenght_error",
+            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.]?\s*Length_error"
+            r"|Length_error",
             re.IGNORECASE,
         ),
         conclusion=(

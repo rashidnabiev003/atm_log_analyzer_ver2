@@ -42,12 +42,12 @@ ERROR_RULES = [
         conclusion="В Validator обнаружено состояние State [67]: купюра снята.",
     ),
     ErrorRule(
-        code="VALIDATOR_HACKING",
-        title="Взлом / нештатное вмешательство",
-        category="validator_security",
-        severity="critical",
-        pattern=re.compile(r"State\s*\[\s*69\s*\]", re.IGNORECASE),
-        conclusion="В Validator обнаружено состояние State [69]: возможное нештатное вмешательство.",
+    code="VALIDATOR_HACKING",
+    title="Взлом / нештатное вмешательство",
+    category="validator_security",
+    severity="critical",
+    pattern=re.compile(r"State\s*\[\s*69\s*\]", re.IGNORECASE),
+    conclusion="В Validator обнаружено состояние State [69]: возможное нештатное вмешательство.",
     ),
     ErrorRule(
         code="VALIDATOR_POWER_OFF",
@@ -104,5 +104,27 @@ ERROR_RULES = [
             re.IGNORECASE,
         ),
         conclusion="В Validator обнаружена ошибка Insertion_error.",
+    ),
+    ErrorRule(
+        code="VALIDATOR_MAIN_FAILURE_IDENTIFICATION",
+        title="Validator: ошибка идентификации купюры",
+        category="validator_cash_acceptor",
+        severity="high",
+        pattern=re.compile(
+            r"Main\s+Failure\s+Description\s*:\s*Identification_error",
+            re.IGNORECASE,
+        ),
+        conclusion="Validator сообщил Main Failure Description: Identification_error.",
+    ),
+    ErrorRule(
+        code="VALIDATOR_MAIN_FAILURE_LENGTH",
+        title="Validator: ошибка прохождения купюры / возможное замятие",
+        category="validator_cash_acceptor",
+        severity="critical",
+        pattern=re.compile(
+            r"Main\s+Failure\s+Description\s*:\s*(?:Lenght|Length)_error",
+            re.IGNORECASE,
+        ),
+        conclusion="Validator сообщил Main Failure Description: Lenght/Length_error. Возможна проблема прохождения купюры.",
     ),
 ]

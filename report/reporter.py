@@ -1,53 +1,60 @@
 from decimal import Decimal
-
 from configs.query import ClientQuery
 from configs.models import Transaction
+from collections import Counter
 
-
-def format_payment_errors(errors: list) -> str:
+def format_unique_errors(errors: list) -> str:
     if not errors:
         return "нет"
 
-    parts = []
+    grouped = {}
 
     for err in errors:
+        key = (
+            err.code,
+            err.title,
+            err.category,
+            err.severity,
+            err.conclusion,
+        )
+
+        if key not in grouped:
+            grouped[key] = {
+                "error": err,
+                "count": 0,
+            }
+
+        grouped[key]["count"] += 1
+
+    parts = []
+
+    for item in grouped.values():
+        err = item["error"]
+        count = item["count"]
+
+        count_suffix = f" x{count}" if count > 1 else ""
+
         parts.append(
             "\n".join(
                 [
-                    f"- [{err.severity}] {err.code}: {err.title}",
+                    f"- [{err.severity}] {err.code}: {err.title}{count_suffix}",
                     f"  Категория: {err.category}",
-                    f"  Время: {err.timestamp if err.timestamp is not None else 'N/A'}",
-                    f"  Сессия: {err.session_id if err.session_id is not None else 'N/A'}",
+                    f"  Время: {getattr(err, 'timestamp', None) or 'N/A'}",
                     f"  Строка: {err.line_no}",
                     f"  Вывод: {err.conclusion}",
-                    f"  Фрагмент: {err.raw[:500]}",
+                    f"  Пример фрагмента: {err.raw[:500]}",
                 ]
             )
         )
 
     return "\n".join(parts)
+
+def format_payment_errors(errors: list) -> str:
+    return format_unique_errors(errors)
 
 
 def format_validator_errors(errors: list) -> str:
-    if not errors:
-        return "нет"
-
-    parts = []
-
-    for err in errors:
-        parts.append(
-            "\n".join(
-                [
-                    f"- [{err.severity}] {err.code}: {err.title}",
-                    f"  Категория: {err.category}",
-                    f"  Время: {err.timestamp if err.timestamp is not None else 'N/A'}",
-                    f"  Вывод: {err.conclusion}",
-                    f"  Фрагмент: {err.raw[:500]}",
-                ]
-            )
-        )
-
-    return "\n".join(parts)
+    return format_unique_errors(errors)
 
 
 def format_validator_cycles(cycles: list) -> str:
