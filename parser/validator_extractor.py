@@ -58,7 +58,7 @@ class ValidatorBillCycle:
     def initial_max_cash(self) -> float | None:
         if not self.max_cash_values:
             return None
-        return self.max_cash_values[0]
+        return max(self.max_cash_values)
 
 
     @property

@@ -50,11 +50,27 @@ class Transaction:
     dps_note_bill_keys: set[str] = field(default_factory=set)
     dps_stacked_bill_values: list[float] = field(default_factory=list)
 
+    def add_bill(self, denomination: int, count: int = 1) -> None:
+        for bill in self.bills:
+            if bill.denomination == denomination:
+                bill.count += count
+                return
+
+        self.bills.append(Bill(denomination=denomination, count=count))
+
+
+    @property
+    def bills_summary(self) -> list[tuple[int, int]]:
+        grouped: dict[int, int] = {}
+
+        for bill in self.bills:
+            grouped[bill.denomination] = grouped.get(bill.denomination, 0) + bill.count
+
+        return sorted(grouped.items())
 
     @property
     def total_inserted(self) -> int:
-        """Sum of all bill values inserted during the transaction."""
-        return sum(bill.total for bill in self.bills)
+        return sum(denom * count for denom, count in self.bills_summary)
 
     def status(self) -> str:
         if not self.has_financial_activity():
@@ -134,7 +150,7 @@ class Transaction:
 
     def report(self) -> str:
         """Format a detailed report string for this transaction."""
-        bill_list = [(b.denomination, b.count) for b in self.bills]
+        bill_list = self.bills_summary
 
         if self.errors:
             grouped = {}

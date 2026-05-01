@@ -3,6 +3,38 @@ from configs.query import ClientQuery
 from configs.models import Transaction
 from collections import Counter
 
+def summarize_validator_cycles(cycles: list) -> dict:
+    total_stacked = sum(float(getattr(cycle, "total_stacked", 0.0)) for cycle in cycles)
+
+    max_cash_values: list[float] = []
+    validator_errors = []
+    incomplete_cycles = 0
+
+    for cycle in cycles:
+        max_cash_values.extend(getattr(cycle, "max_cash_values", []))
+        validator_errors.extend(getattr(cycle, "errors", []))
+
+        if not getattr(cycle, "is_complete", False):
+            incomplete_cycles += 1
+
+    initial_max_cash = max(max_cash_values) if max_cash_values else None
+    remaining_max_cash = min(max_cash_values) if max_cash_values else None
+
+    if initial_max_cash is not None and remaining_max_cash is not None:
+        max_cash_delta = initial_max_cash - remaining_max_cash
+    else:
+        max_cash_delta = None
+
+    return {
+        "cycles_count": len(cycles),
+        "incomplete_cycles": incomplete_cycles,
+        "total_stacked": total_stacked,
+        "initial_max_cash": initial_max_cash,
+        "remaining_max_cash": remaining_max_cash,
+        "max_cash_delta": max_cash_delta,
+        "errors": validator_errors,
+    }
+
 def classify_operation(tx, payment_errors: list, validator_cycles: list) -> str:
     validator_errors = []
     validator_incomplete = False
@@ -92,42 +124,27 @@ def format_validator_cycles(cycles: list) -> str:
     if not cycles:
         return "нет"
 
-    parts = []
-    all_errors = []
+    summary = summarize_validator_cycles(cycles)
 
-    total_validator_stacked = 0.0
+    parts = [
+        f"Циклов Validator: {summary['cycles_count']}",
+        f"Незавершённых циклов: {summary['incomplete_cycles']}",
+        f"Принято по Stacked nominal: {summary['total_stacked']:g} TJS",
+        f"MaxCash начальный: {summary['initial_max_cash'] if summary['initial_max_cash'] is not None else 'N/A'}",
+        f"MaxCash остаток: {summary['remaining_max_cash'] if summary['remaining_max_cash'] is not None else 'N/A'}",
+        f"По разнице MaxCash: {summary['max_cash_delta'] if summary['max_cash_delta'] is not None else 'N/A'} TJS",
+    ]
 
-    for idx, cycle in enumerate(cycles, start=1):
-        cycle_errors = getattr(cycle, "errors", [])
-        all_errors.extend(cycle_errors)
-
-        total_stacked = getattr(cycle, "total_stacked", 0.0)
-        total_validator_stacked += total_stacked
-
-        initial_max_cash = getattr(cycle, "initial_max_cash", None)
-        remaining_max_cash = getattr(cycle, "remaining_max_cash", None)
-        max_cash_delta = getattr(cycle, "total_by_max_cash_delta", None)
-
-        parts.append(
-            "\n".join(
-                [
-                    f"- Цикл приёма купюр {idx}",
-                    f"  Начало: {cycle.started_at if cycle.started_at is not None else 'N/A'}",
-                    f"  Конец: {cycle.finished_at if cycle.finished_at is not None else 'N/A'}",
-                    f"  Завершён корректно: {'да' if cycle.is_complete else 'нет'}",
-                    f"  Принято по Validator: {total_stacked:g} TJS",
-                    f"  MaxCash начальный: {initial_max_cash if initial_max_cash is not None else 'N/A'}",
-                    f"  MaxCash остаток: {remaining_max_cash if remaining_max_cash is not None else 'N/A'}",
-                    f"  По разнице MaxCash: {max_cash_delta if max_cash_delta is not None else 'N/A'} TJS",
-                ]
+    if summary["max_cash_delta"] is not None and summary["total_stacked"] > 0:
+        if round(summary["max_cash_delta"], 2) != round(summary["total_stacked"], 2):
+            parts.append(
+                f"Предупреждение: Stacked nominal={summary['total_stacked']:g} TJS, "
+                f"а MaxCash delta={summary['max_cash_delta']:g} TJS"
             )
-        )
 
-    parts.append(f"Итого принято по Validator: {total_validator_stacked:g} TJS")
-
-    if all_errors:
+    if summary["errors"]:
         parts.append("Ошибки Validator:")
-        parts.append(format_unique_errors(all_errors))
+        parts.append(format_unique_errors(summary["errors"]))
 
     return "\n".join(parts)
 
@@ -176,7 +193,9 @@ def format_investigation_report(result: dict) -> str:
         tx = item["transaction"]
         payment_errors = item.get("payment_errors", [])
         validator_cycles = item.get("validator_cycles", [])
-        validator_total = sum(getattr(cycle, "total_stacked", 0.0) for cycle in validator_cycles)
+        validator_summary = summarize_validator_cycles(validator_cycles)
+        validator_total = validator_summary["total_stacked"]
+        validator_max_cash_delta = validator_summary["max_cash_delta"]
 
         validator_errors = []
         for cycle in validator_cycles:
@@ -212,16 +231,20 @@ def format_investigation_report(result: dict) -> str:
         parts.append(format_validator_cycles(validator_cycles))
         parts.append("")
         parts.append("Сравнение сумм DPS / Validator:")
-        parts.append(f"- По таблице DPS: {tx.total_inserted} TJS")
-        parts.append(f"- По Validator: {validator_total:g} TJS")
+        parts.append(f"- По DPS: {tx.total_inserted} TJS")
+        parts.append(f"- По Validator Stacked nominal: {validator_total:g} TJS")
+        parts.append(
+            f"- По Validator MaxCash delta: "
+            f"{validator_max_cash_delta if validator_max_cash_delta is not None else 'N/A'} TJS"
+        )
 
         if validator_total > 0 and tx.total_inserted > 0:
             diff_validator = Decimal(str(tx.total_inserted)) - Decimal(str(validator_total))
-            parts.append(f"- Разница DPS - Validator: {diff_validator} TJS")
-        elif validator_total > 0 and tx.total_inserted == 0:
-            parts.append("- В DPS нет таблицы купюр, но Validator зафиксировал принятые купюры.")
-        elif validator_total == 0:
-            parts.append("- Validator не зафиксировал уложенные купюры для этой транзакции.")
+            parts.append(f"- Разница DPS - Validator Stacked: {diff_validator} TJS")
+
+        if validator_max_cash_delta is not None and tx.total_inserted > 0:
+            diff_max_cash = Decimal(str(tx.total_inserted)) - Decimal(str(validator_max_cash_delta))
+            parts.append(f"- Разница DPS - Validator MaxCash: {diff_max_cash} TJS")
 
         if query.claimed_amount is not None:
             detected = Decimal(str(tx.total_inserted))

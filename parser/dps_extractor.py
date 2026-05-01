@@ -119,7 +119,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
                     if row_key not in target_tx.dps_note_bill_keys:
                         target_tx.dps_note_bill_keys.add(row_key)
-                        target_tx.bills.append(Bill(denomination=int(value), count=1))
+                        target_tx.add_bill(denomination=int(value), count=1)
 
                 for bill_match in patterns.BILL_RE.finditer(line):
                     denom = int(bill_match.group("denom"))
@@ -134,7 +134,7 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
 
                     if row_key not in target_tx.bill_row_keys:
                         target_tx.bill_row_keys.add(row_key)
-                        target_tx.bills.append(Bill(denomination=denom, count=count))
+                        target_tx.add_bill(denomination=denom, count=count)
 
                 payment_fields = patterns.parse_payment_fields(line)
 
