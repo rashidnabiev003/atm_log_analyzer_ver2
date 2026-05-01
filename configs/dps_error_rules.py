@@ -19,11 +19,12 @@ ERROR_RULES = [
         category="cash_acceptor",
         severity="critical",
         pattern=re.compile(
-            r"stacker_opened\s*=\s*false\s*\.?\s*Lenght_error|Lenght_error",
+            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.=]?\s*(?:Lenght|Length)_error"
+            r"|(?:Lenght|Length)_error",
             re.IGNORECASE,
         ),
         conclusion=(
-            "Обнаружена ошибка Lenght_error. Вероятно, купюра застряла "
+            "Обнаружена ошибка Lenght/Length_error. Вероятно, купюра застряла "
             "или некорректно прошла внутри купюроприёмника."
         ),
     ),

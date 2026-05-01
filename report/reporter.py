@@ -62,8 +62,19 @@ def format_validator_cycles(cycles: list) -> str:
         return "нет"
 
     parts = []
+    all_errors = []
+
+    total_validator_stacked = 0.0
 
     for idx, cycle in enumerate(cycles, start=1):
+        cycle_errors = getattr(cycle, "errors", [])
+        all_errors.extend(cycle_errors)
+
+        total_stacked = getattr(cycle, "total_stacked", 0.0)
+        total_validator_stacked += total_stacked
+
+        last_max_cash = getattr(cycle, "last_max_cash", None)
+
         parts.append(
             "\n".join(
                 [
@@ -71,11 +82,17 @@ def format_validator_cycles(cycles: list) -> str:
                     f"  Начало: {cycle.started_at if cycle.started_at is not None else 'N/A'}",
                     f"  Конец: {cycle.finished_at if cycle.finished_at is not None else 'N/A'}",
                     f"  Завершён корректно: {'да' if cycle.is_complete else 'нет'}",
-                    f"  Ошибки Validator:",
-                    format_validator_errors(getattr(cycle, "errors", [])),
+                    f"  Принято по Validator: {total_stacked:g} TJS",
+                    f"  Последний MaxCash: {last_max_cash if last_max_cash is not None else 'N/A'}",
                 ]
             )
         )
+
+    parts.append(f"Итого принято по Validator: {total_validator_stacked:g} TJS")
+
+    if all_errors:
+        parts.append("Ошибки Validator:")
+        parts.append(format_unique_errors(all_errors))
 
     return "\n".join(parts)
 
@@ -124,6 +141,7 @@ def format_investigation_report(result: dict) -> str:
         tx = item["transaction"]
         payment_errors = item.get("payment_errors", [])
         validator_cycles = item.get("validator_cycles", [])
+        validator_total = sum(getattr(cycle, "total_stacked", 0.0) for cycle in validator_cycles)
 
         validator_errors = []
         for cycle in validator_cycles:
@@ -150,6 +168,18 @@ def format_investigation_report(result: dict) -> str:
         parts.append("")
         parts.append("Циклы Validator:")
         parts.append(format_validator_cycles(validator_cycles))
+        parts.append("")
+        parts.append("Сравнение сумм DPS / Validator:")
+        parts.append(f"- По таблице DPS: {tx.total_inserted} TJS")
+        parts.append(f"- По Validator: {validator_total:g} TJS")
+
+        if validator_total > 0 and tx.total_inserted > 0:
+            diff_validator = Decimal(str(tx.total_inserted)) - Decimal(str(validator_total))
+            parts.append(f"- Разница DPS - Validator: {diff_validator} TJS")
+        elif validator_total > 0 and tx.total_inserted == 0:
+            parts.append("- В DPS нет таблицы купюр, но Validator зафиксировал принятые купюры.")
+        elif validator_total == 0:
+            parts.append("- Validator не зафиксировал уложенные купюры для этой транзакции.")
 
         if query.claimed_amount is not None:
             detected = Decimal(str(tx.total_inserted))

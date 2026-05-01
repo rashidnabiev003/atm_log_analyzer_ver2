@@ -70,14 +70,13 @@ LOCAL_DATIME_RE = re.compile(
 
 #### VALIDATOR PATTERNS
 
+
 VALIDATOR_ENABLE_BILL_RE = re.compile(
-    r"\bENABLE\s+BILL\b",
-    re.IGNORECASE,
+    r"\bENABLE\s+BILL\b"
 )
 
 VALIDATOR_DISABLE_BILL_RE = re.compile(
-    r"\bDISABLE\s+BILL\b",
-    re.IGNORECASE,
+    r"\bDISABLE\s+BILL\b"
 )
 
 VALIDATOR_STATE_RE = re.compile(
@@ -85,12 +84,20 @@ VALIDATOR_STATE_RE = re.compile(
     re.IGNORECASE,
 )
 
+VALIDATOR_STACKED_NOMINAL_RE = re.compile(
+    r"Stacked\s+nominal\s*=\s*(?P<value>\d+(?:[.,]\d+)?)",
+    re.IGNORECASE,
+)
+
+VALIDATOR_SET_MAX_CASH_RE = re.compile(
+    r"SetMaxCash\(\)\s*:\s*MaxCash\s*=\s*(?P<value>\d+(?:[.,]\d+)?)",
+    re.IGNORECASE,
+)
+
 LOG_TIMESTAMP_RE = re.compile(
     r"(?P<ts>\d{2}[./]\d{2}[./]\d{4}\s+\d{2}[.:]\d{2}[.:]\d{2}[.:]\d{3})"
 )
 
-
-### PAYMENT PATTERNS
 
 ### PARSERS
 

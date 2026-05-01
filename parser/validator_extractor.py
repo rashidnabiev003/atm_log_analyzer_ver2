@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Iterable
 
 from configs import patterns
+from configs.validator_error_rules import ERROR_RULES, ValidatorLogError
 from parser.reader import read_log_records
 from parser.time_utils import parse_log_timestamp
-from configs.validator_error_rules import ERROR_RULES, ValidatorLogError
 
 
 @dataclass
@@ -16,6 +16,15 @@ class ValidatorStateEvent:
     raw: str
     timestamp: datetime | None = None
 
+
+@dataclass
+class ValidatorStackedBill:
+    nominal: float
+    line_no: int
+    raw: str
+    timestamp: datetime | None = None
+
+
 @dataclass
 class ValidatorBillCycle:
     started_at: datetime | None
@@ -23,13 +32,34 @@ class ValidatorBillCycle:
     line_start: int | None = None
     line_end: int | None = None
     states: list[ValidatorStateEvent] = field(default_factory=list)
+    stacked_bills: list[ValidatorStackedBill] = field(default_factory=list)
+    max_cash_values: list[float] = field(default_factory=list)
     errors: list[ValidatorLogError] = field(default_factory=list)
+
+    @property
+    def has_disable_bill(self) -> bool:
+        return self.finished_at is not None
 
     @property
     def is_complete(self) -> bool:
         required = {20, 21, 128, 23, 129}
         found = {event.state for event in self.states}
-        return required.issubset(found)
+
+        # ВАЖНО:
+        # одних state недостаточно.
+        # Если нет DISABLE BILL, операция незавершённая.
+        return self.has_disable_bill and required.issubset(found)
+
+    @property
+    def total_stacked(self) -> float:
+        return sum(bill.nominal for bill in self.stacked_bills)
+
+    @property
+    def last_max_cash(self) -> float | None:
+        if not self.max_cash_values:
+            return None
+        return self.max_cash_values[-1]
+
 
 def detect_validator_errors(record: str, line_no: int) -> list[ValidatorLogError]:
     timestamp = parse_log_timestamp(record)
@@ -52,6 +82,14 @@ def detect_validator_errors(record: str, line_no: int) -> list[ValidatorLogError
 
     return result
 
+
+def parse_float(value: str) -> float | None:
+    try:
+        return float(value.replace(",", "."))
+    except ValueError:
+        return None
+
+
 def extract_validator_cycles_from_records(records: Iterable[str]) -> list[ValidatorBillCycle]:
     cycles: list[ValidatorBillCycle] = []
     current_cycle: ValidatorBillCycle | None = None
@@ -62,8 +100,6 @@ def extract_validator_cycles_from_records(records: Iterable[str]) -> list[Valida
 
         if patterns.VALIDATOR_ENABLE_BILL_RE.search(record):
             if current_cycle is not None:
-                if record_errors:
-                    current_cycle.errors.extend(record_errors)
                 cycles.append(current_cycle)
 
             current_cycle = ValidatorBillCycle(
@@ -71,7 +107,17 @@ def extract_validator_cycles_from_records(records: Iterable[str]) -> list[Valida
                 line_start=line_no,
             )
 
+        # Если ошибка встретилась вне ENABLE/DISABLE, не теряем её.
+        if record_errors and current_cycle is None:
+            current_cycle = ValidatorBillCycle(
+                started_at=timestamp,
+                line_start=line_no,
+            )
+
         if current_cycle is not None:
+            if record_errors:
+                current_cycle.errors.extend(record_errors)
+
             state_match = patterns.VALIDATOR_STATE_RE.search(record)
             if state_match:
                 current_cycle.states.append(
@@ -82,6 +128,23 @@ def extract_validator_cycles_from_records(records: Iterable[str]) -> list[Valida
                         timestamp=timestamp,
                     )
                 )
+
+            for max_cash_match in patterns.VALIDATOR_SET_MAX_CASH_RE.finditer(record):
+                value = parse_float(max_cash_match.group("value"))
+                if value is not None:
+                    current_cycle.max_cash_values.append(value)
+
+            for stacked_match in patterns.VALIDATOR_STACKED_NOMINAL_RE.finditer(record):
+                value = parse_float(stacked_match.group("value"))
+                if value is not None:
+                    current_cycle.stacked_bills.append(
+                        ValidatorStackedBill(
+                            nominal=value,
+                            line_no=line_no,
+                            raw=record,
+                            timestamp=timestamp,
+                        )
+                    )
 
         if patterns.VALIDATOR_DISABLE_BILL_RE.search(record):
             if current_cycle is not None:
