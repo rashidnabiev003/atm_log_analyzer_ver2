@@ -10,6 +10,11 @@ from parser.payments_extractor import extract_payment_errors
 from report.investigator import investigate
 from report.reporter import print_investigation_report
 
+from storage.context_provider import InvestigationContextProvider
+from storage.mysql_client import MysqlClient
+from storage.repositories import OperationRepository, PaymentRepository
+from storage.db_settings import load_main_mysql_settings, load_msdb_settings
+
 
 KIOSK_LOG_PATH = Path("log.txt")
 PAYMENTS_THREAD_LOG_PATH = Path("PaymentsThread.log")
@@ -26,17 +31,17 @@ def optional_existing_file(path: Path) -> str | None:
     return str(path) if path.exists() else None
 
 
-def get_log_sources() -> dict[str, str | None]:
-    """
-    Единая точка, где сейчас задаются пути к трём логам.
+def build_context_provider() -> InvestigationContextProvider:
+    operation_client = MysqlClient(load_msdb_settings())
+    payment_client = MysqlClient(load_main_mysql_settings())
 
-    Позже это место можно заменить на получение файлов/путей из БД.
-    """
-    return {
-        "kiosk_log": required_existing_file(KIOSK_LOG_PATH),
-        "payments_log": optional_existing_file(PAYMENTS_THREAD_LOG_PATH),
-        "validator_log": optional_existing_file(VALIDATOR_LOG_PATH),
-    }
+    return InvestigationContextProvider(
+        operation_repo=OperationRepository(operation_client),
+        payment_repo=PaymentRepository(payment_client),
+        kiosk_log_path=KIOSK_LOG_PATH,
+        payments_log_path=PAYMENTS_THREAD_LOG_PATH,
+        validator_log_path=VALIDATOR_LOG_PATH,
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,23 +63,29 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    log_sources = get_log_sources()
-
-    query = ClientQuery(
-        phone_number=args.phone_number,
-        account=args.account,
-        claimed_amount=args.claimed_amount,
+    context = build_context_provider().build(
+    phone_number=args.phone_number,
+    account=args.account,
+    claimed_amount=args.claimed_amount,
     )
 
-    transactions = extract_transactions(read_log_records(log_sources["kiosk_log"]))
+    query = ClientQuery(
+        phone_number=context.phone_number,
+        account=context.account,
+        claimed_amount=context.claimed_amount,
+    )
+
+    transactions = extract_transactions(
+        read_log_records(context.log_paths.kiosk_log)
+    )
 
     validator_cycles = []
-    if log_sources["validator_log"]:
-        validator_cycles = extract_validator_cycles(log_sources["validator_log"])
+    if context.log_paths.validator_log:
+        validator_cycles = extract_validator_cycles(context.log_paths.validator_log)
 
     payment_errors = []
-    if log_sources["payments_log"]:
-        payment_errors = extract_payment_errors(log_sources["payments_log"])
+    if context.log_paths.payments_log:
+        payment_errors = extract_payment_errors(context.log_paths.payments_log)
 
     result = investigate(
         transactions,
@@ -82,10 +93,16 @@ def main() -> None:
         payment_errors=payment_errors,
         validator_cycles=validator_cycles,
     )
-    result["log_sources"] = log_sources
+
+    result["log_sources"] = {
+        "kiosk_log": context.log_paths.kiosk_log,
+        "payments_log": context.log_paths.payments_log,
+        "validator_log": context.log_paths.validator_log,
+    }
+    result["operation_info"] = context.operation
+    result["payment_info"] = context.payment
 
     print_investigation_report(result)
-
 
 if __name__ == "__main__":
     main()

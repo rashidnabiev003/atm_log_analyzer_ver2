@@ -10,3 +10,6 @@ dependencies = [
     "pyodbc",
     "pymysql"
 ]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["configs*", "parser*", "report*", "session*", "storage*"]
