@@ -42,6 +42,7 @@ class Transaction:
     comission_amount: Optional[float] = None    
     local_datetime: Optional[str] = None
     named_fields: dict[str, str] = field(default_factory=dict)
+    max_collect_amount: Optional[float] = None
 
     started_at: datetime | None = None
     completed_at: datetime | None = None
@@ -193,6 +194,7 @@ class Transaction:
             f"Сессия: {self.session_id}\n"
             f"Телефон: {self.phone}\n"
             f"Аккаунт: {self.account}\n"
+            f"Максимум к приёму: {self.max_collect_amount if self.max_collect_amount is not None else 'N/A'} TJS\n"
             f"Внесено по таблице купюр: {self.total_inserted} TJS (купюры: {bill_list})\n"
             f"AMOUNTALL: {self.expected_amount if self.expected_amount is not None else 'N/A'}\n"
             f"COMISSION: {self.comission_amount if self.comission_amount is not None else 'N/A'}\n"

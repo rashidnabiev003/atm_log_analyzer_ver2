@@ -73,6 +73,12 @@ LOCAL_DATIME_RE = re.compile(
     re.IGNORECASE,
 )
 
+DPS_MAX_PAYMENT_AMOUNT_RE = re.compile(
+    r"Maximum\s+amount\s+to\s+collect\s+in\s+this\s+payment\s*:\s*"
+    r"(?P<value>\d+(?:[.,]\d+)?)",
+    re.IGNORECASE,
+)
+
 #### VALIDATOR PATTERNS
 VALIDATOR_DEVICE_START_RE = re.compile(
     r"Старт\s+работы\s+устройства",

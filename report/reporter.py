@@ -8,8 +8,6 @@ def summarize_validator_cycles(cycles: list) -> dict:
 
     validator_errors = []
     incomplete_cycles = 0
-    max_cash_delta_total = 0.0
-    has_max_cash_delta = False
 
     for cycle in cycles:
         validator_errors.extend(getattr(cycle, "errors", []))
@@ -17,16 +15,10 @@ def summarize_validator_cycles(cycles: list) -> dict:
         if not getattr(cycle, "is_complete", False):
             incomplete_cycles += 1
 
-        cycle_delta = getattr(cycle, "total_by_max_cash_delta", None)
-        if cycle_delta is not None:
-            max_cash_delta_total += float(cycle_delta)
-            has_max_cash_delta = True
-
     return {
         "cycles_count": len(cycles),
         "incomplete_cycles": incomplete_cycles,
         "total_stacked": total_stacked,
-        "max_cash_delta": max_cash_delta_total if has_max_cash_delta else None,
         "errors": validator_errors,
     }
 

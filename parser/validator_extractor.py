@@ -33,7 +33,6 @@ class ValidatorBillCycle:
     line_end: int | None = None
     states: list[ValidatorStateEvent] = field(default_factory=list)
     stacked_bills: list[ValidatorStackedBill] = field(default_factory=list)
-    max_cash_values: list[float] = field(default_factory=list)
     errors: list[ValidatorLogError] = field(default_factory=list)
     closed_by: str | None = None
 
@@ -51,38 +50,6 @@ class ValidatorBillCycle:
     def total_stacked(self) -> float:
         return sum(bill.nominal for bill in self.stacked_bills)
 
-    @property
-    def initial_max_cash(self) -> float | None:
-        if not self.max_cash_values:
-            return None
-
-        return self.max_cash_values[0]
-
-
-    @property
-    def remaining_max_cash(self) -> float | None:
-        if not self.max_cash_values:
-            return None
-
-        return self.max_cash_values[-1]
-
-
-    @property
-    def total_by_max_cash_delta(self) -> float | None:
-        if len(self.max_cash_values) < 2:
-            return None
-
-        delta = 0.0
-
-        previous = self.max_cash_values[0]
-
-        for current in self.max_cash_values[1:]:
-            if current < previous:
-                delta += previous - current
-
-            previous = current
-
-        return delta
 
 
 def detect_validator_errors(record: str, line_no: int) -> list[ValidatorLogError]:

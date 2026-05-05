@@ -107,6 +107,11 @@ def extract_transactions(lines: Iterable[str]) -> List[Transaction]:
                     if value is not None:
                         target_tx.dps_stacked_bill_values.append(value)
 
+                for max_amount_match in patterns.DPS_MAX_PAYMENT_AMOUNT_RE.finditer(line):
+                    value = patterns.parse_money(max_amount_match.group("value"))
+                    if value is not None:
+                        target_tx.max_collect_amount = value
+
                 for note_match in patterns.DPS_NOTE_ADDED_RE.finditer(line):
                     value = patterns.parse_money(note_match.group("denom"))
                     if value is None:
