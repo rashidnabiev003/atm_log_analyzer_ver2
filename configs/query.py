@@ -4,25 +4,33 @@ from decimal import Decimal
 
 @dataclass(frozen=True)
 class ClientQuery:
-    phone_number: str
+    phone_number: str | None = None
     account: str | None = None
     claimed_amount: Decimal | None = None
 
 
-def normalize_phone(phone: str | None) -> str | None:
-    if phone is None:
+def normalize_digits(value: str | None) -> str | None:
+    if value is None:
         return None
-    return "".join(ch for ch in phone if ch.isdigit())
+
+    digits = "".join(ch for ch in value if ch.isdigit())
+    return digits or None
 
 
 def transaction_matches_query(tx, query: ClientQuery) -> bool:
-    tx_phone = normalize_phone(tx.phone)
-    query_phone = normalize_phone(query.phone_number)
+    query_phone = normalize_digits(query.phone_number)
+    query_account = normalize_digits(query.account)
 
-    if tx_phone != query_phone:
+    tx_phone = normalize_digits(tx.phone)
+    tx_account = normalize_digits(tx.account)
+
+    if query_phone is None and query_account is None:
         return False
 
-    if query.account and tx.account != query.account:
-        return False
+    if query_phone is not None and tx_phone == query_phone:
+        return True
 
-    return True
+    if query_account is not None and tx_account == query_account:
+        return True
+
+    return False
