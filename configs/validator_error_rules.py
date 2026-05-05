@@ -63,8 +63,8 @@ ERROR_RULES = [
         category="validator_cash_acceptor",
         severity="critical",
         pattern=re.compile(
-            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.]?\s*Lenght_error"
-            r"|Lenght_error",
+            r"(?:stacker|staker)_opened\s*=\s*false\s*[:.]?\s*Length_error"
+            r"|Length_error",
             re.IGNORECASE,
         ),
         conclusion="В Validator обнаружена ошибка Lenght_error. Возможна проблема прохождения купюры.",
@@ -122,9 +122,9 @@ ERROR_RULES = [
         category="validator_cash_acceptor",
         severity="critical",
         pattern=re.compile(
-            r"Main\s+Failure\s+Description\s*:\s*(?:Lenght|Length)_error",
+            r"Main\s+Failure\s+Description\s*:\s*(?:Length)_error",
             re.IGNORECASE,
         ),
-        conclusion="Validator сообщил Main Failure Description: Lenght/Length_error. Возможна проблема прохождения купюры.",
+        conclusion="Validator сообщил Main Failure Description: Length_error. Возможна проблема прохождения купюры.",
     ),
 ]

@@ -189,11 +189,6 @@ def extract_validator_cycles_from_records(records: Iterable[str]) -> list[Valida
                     )
                 )
 
-            for max_cash_match in patterns.VALIDATOR_SET_MAX_CASH_RE.finditer(record):
-                value = parse_float(max_cash_match.group("value"))
-                if value is not None:
-                    current_cycle.max_cash_values.append(value)
-
             for stacked_match in patterns.VALIDATOR_STACKED_NOMINAL_RE.finditer(record):
                 value = parse_float(stacked_match.group("value"))
                 if value is not None:
