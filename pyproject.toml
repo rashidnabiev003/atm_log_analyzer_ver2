@@ -6,13 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 
 dependencies = [
-    "pydantic>=2.10.0",
-]
-[tool.setuptools]
-packages = ["app"]
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "black",
-    "flake8"
+    "dotenv",
+    "pyodbc",
+    "pymysql"
 ]
